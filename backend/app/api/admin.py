@@ -168,7 +168,8 @@ async def handle_report(
         report.admin_notes = admin_notes or "Content hidden due to community guidelines violation."
         
         # Hide target post or answer
-        if report.target_type.value == "POST":
+        target_is_post = (report.target_type.value == "POST") if hasattr(report.target_type, 'value') else (str(report.target_type) == "POST")
+        if target_is_post:
             p_stmt = select(CommunityPost).where(CommunityPost.id == report.target_id)
             p_res = await db.execute(p_stmt)
             p = p_res.scalars().first()

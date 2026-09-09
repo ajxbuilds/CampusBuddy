@@ -41,10 +41,11 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
         user_id: str = payload.get("sub")
         if user_id is None:
             raise credentials_exception
-    except JWTError:
+        uid = int(user_id)
+    except (JWTError, ValueError, TypeError):
         raise credentials_exception
 
-    stmt = select(User).where(User.id == int(user_id))
+    stmt = select(User).where(User.id == uid)
     result = await db.execute(stmt)
     user = result.scalars().first()
     if user is None:

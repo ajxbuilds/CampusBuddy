@@ -49,8 +49,12 @@ async def request_escalation(
 
     # Check if SLA breached
     sla_breached = False
-    if complaint.sla_deadline and datetime.now(timezone.utc) > complaint.sla_deadline.replace(tzinfo=timezone.utc):
-        sla_breached = True
+    if complaint.sla_deadline:
+        deadline = complaint.sla_deadline
+        if deadline.tzinfo is None:
+            deadline = deadline.replace(tzinfo=timezone.utc)
+        if datetime.now(timezone.utc) > deadline:
+            sla_breached = True
 
     # Check eligibility: SLA breached or status is REJECTED or has been pending/in progress for extended time
     is_eligible = (
