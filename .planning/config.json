@@ -1,0 +1,7 @@
+{
+  "workflow": {
+    "planning": true,
+    "model_profile": "balanced",
+    "parallel_tasks": true
+  }
+}
