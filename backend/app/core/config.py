@@ -23,7 +23,6 @@ class Settings(BaseSettings):
         "http://127.0.0.1:3000",
         "http://localhost:8000",
         "http://127.0.0.1:8000",
-        "*"
     ]
 
     # File uploads
@@ -34,6 +33,17 @@ class Settings(BaseSettings):
     AI_PROVIDER: str = os.getenv("AI_PROVIDER", "auto") # auto, gemini, openai, mock
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
+
+    # Frontend URL
+    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:5173")
+
+    # Google OAuth 2.0 Configuration
+    GOOGLE_CLIENT_ID: str = os.getenv("GOOGLE_CLIENT_ID", "")
+    GOOGLE_CLIENT_SECRET: str = os.getenv("GOOGLE_CLIENT_SECRET", "")
+    GOOGLE_REDIRECT_URI: str = os.getenv(
+        "GOOGLE_REDIRECT_URI", 
+        "http://localhost:8000/api/auth/google/callback"
+    )
 
     class Config:
         case_sensitive = True

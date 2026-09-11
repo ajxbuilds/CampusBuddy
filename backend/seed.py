@@ -19,22 +19,23 @@ from app.models.gamification import Badge, UserBadge, PointTransaction
 from app.models.notification import Notification, NotificationType
 from app.models.audit import AuditLog
 
+
 async def seed_database():
     print("[INIT] Initializing database schema...")
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
     async with AsyncSessionLocal() as db:
-        # Check if already seeded
+        # Check if base seeded
         res = await db.execute(select(User).where(User.email == "admin@campusbuddy.edu"))
         if res.scalars().first():
-            print("[INFO] Database already seeded. Skipping.")
+            print("[INFO] Base users already seeded. Skipping.")
             return
 
         print("[SEED] Seeding categories...")
         categories_data = [
             {"name": "Academic", "code": "ACADEMIC", "department": "Academic Affairs", "sla_hours": 48, "description": "Curriculum, attendance, syllabus, and course credit queries"},
-            {"name": "Faculty", "code": "FACULTY", "department": "Dean Faculty Affairs", "sla_hours": 72, "description": "Faculty grievances, lecture scheduling, and mentorship"},
+            {"name": "Faculty", "code": "FACULTY", "department": "Faculty Affairs", "sla_hours": 72, "description": "Faculty grievances, lecture scheduling, and mentorship"},
             {"name": "Examination", "code": "EXAMINATION", "department": "Exam Section", "sla_hours": 36, "description": "Hall tickets, re-evaluation, marksheet corrections, and timetables"},
             {"name": "Fees & Accounts", "code": "FEES", "department": "Finance & Accounts", "sla_hours": 24, "description": "Payment receipts, refund requests, challans, and portal dues"},
             {"name": "Scholarship", "code": "SCHOLARSHIP", "department": "Student Welfare", "sla_hours": 72, "description": "Government and merit scholarship approvals and verifications"},
@@ -74,11 +75,11 @@ async def seed_database():
         admin = User(
             email="admin@campusbuddy.edu",
             hashed_password=get_password_hash("Admin@123"),
-            full_name="Dean Dr. S. K. Rao",
+            full_name="System Admin",
             role=UserRole.ADMIN,
-            department="Dean Administration",
+            department="Central Administration",
             phone="+91 98765 43210",
-            avatar_url="https://api.dicebear.com/7.x/avataaars/svg?seed=DeanRao",
+            avatar_url="https://api.dicebear.com/7.x/avataaars/svg?seed=SysAdmin",
             is_active=True,
             created_at=now - timedelta(days=60)
         )
@@ -411,6 +412,7 @@ async def seed_database():
 
         await db.commit()
         print("[SUCCESS] Database successfully seeded with rich demo data!")
+
 
 if __name__ == "__main__":
     asyncio.run(seed_database())

@@ -1,4 +1,4 @@
-import {
+import { StudyBuddyProfile, StudyBuddyProfileCreate, StudyBuddyDiscover, StudyBuddyRequest, StudyBuddyConnection, 
   AuthResponse,
   User,
   Complaint,
@@ -20,6 +20,7 @@ import {
   AIChatResponse,
 } from '../types';
 
+
 const API_BASE = 'http://localhost:8000/api';
 
 function getToken(): string | null {
@@ -29,9 +30,12 @@ function getToken(): string | null {
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
     ...(options.headers as Record<string, string>),
   };
+
+  if (!(options.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json';
+  }
 
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
@@ -72,8 +76,49 @@ export const api = {
 
   getMe: () => request<User>('/auth/me'),
 
+  // Google OAuth
+  getGoogleAuthStatus: () =>
+    request<{ configured: boolean; client_id: string | null; redirect_uri: string }>('/auth/google/status'),
+
+  getGoogleLoginUrl: (redirect: boolean = false) =>
+    request<{ configured: boolean; url: string | null; message: string | null }>(
+      `/auth/google/login?redirect=${redirect}`
+    ),
+
+  simulateGoogleLogin: (email?: string, name?: string, picture?: string) => {
+    const params = new URLSearchParams();
+    if (email) params.append('email', email);
+    if (name) params.append('name', name);
+    if (picture) params.append('picture', picture);
+    return request<{
+      status: string;
+      action: 'login' | 'onboard';
+      redirect_url: string;
+      token?: string;
+      onboarding_token?: string;
+    }>(`/auth/google/dev-simulate?${params.toString()}`, {
+      method: 'POST',
+    });
+  },
+
+  onboardGoogleUser: (data: {
+    onboarding_token: string;
+    role: string;
+    department?: string;
+    phone?: string;
+    roll_number?: string;
+    semester?: number;
+    program?: string;
+    linked_student_id?: number;
+  }) =>
+    request<AuthResponse>('/auth/google/onboard', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
   listStudents: () => request<User[]>('/auth/students'),
   listStaff: () => request<User[]>('/auth/staff'),
+  getLinkedStudent: () => request<User | null>('/auth/parent/linked-student'),
 
   // Complaints
   getCategories: () => request<ComplaintCategory[]>('/complaints/categories'),
@@ -185,10 +230,15 @@ export const api = {
     request<LeaderboardResponse>(`/gamification/leaderboard?period=${period}`),
 
   // AI Assistant
-  askAI: (messages: AIChatMessage[], contextCategory?: string) =>
+  askAI: (messages: AIChatMessage[], contextCategory?: string, currentPage?: string, quickAction?: string) =>
     request<AIChatResponse>('/ai/chat', {
       method: 'POST',
-      body: JSON.stringify({ messages, context_category: contextCategory }),
+      body: JSON.stringify({
+        messages,
+        context_category: contextCategory,
+        current_page: currentPage,
+        quick_action: quickAction,
+      }),
     }),
 
   // Notifications
@@ -228,4 +278,17 @@ export const api = {
   // Analytics
   getCategoryDistribution: () => request<CategoryDistribution[]>('/analytics/by-category'),
   getTrends: (days = 7) => request<ComplaintsTrendPoint[]>(`/analytics/trends?days=${days}`),
+  // Study Buddy Methods
+  studyBuddy: {
+    getProfile: () => request<StudyBuddyProfile>('/study-buddy/profile'),
+    createProfile: (data: StudyBuddyProfileCreate) => request<StudyBuddyProfile>('/study-buddy/profile', { method: 'POST', body: JSON.stringify(data) }),
+    updateProfile: (data: Partial<StudyBuddyProfileCreate>) => request<StudyBuddyProfile>('/study-buddy/profile', { method: 'PATCH', body: JSON.stringify(data) }),
+    discover: () => request<StudyBuddyDiscover[]>('/study-buddy/discover'),
+    sendRequest: (receiverId: number, message?: string) => request<StudyBuddyRequest>('/study-buddy/requests', { method: 'POST', body: JSON.stringify({ receiver_id: receiverId, message }) }),
+    getRequests: () => request<{incoming: {request: StudyBuddyRequest, user: any}[], outgoing: {request: StudyBuddyRequest, user: any}[]}>('/study-buddy/requests'),
+    acceptRequest: (reqId: number) => request(`/study-buddy/requests/${reqId}/accept`, { method: 'POST' }),
+    rejectRequest: (reqId: number) => request(`/study-buddy/requests/${reqId}/reject`, { method: 'POST' }),
+    getConnections: () => request<StudyBuddyConnection[]>('/study-buddy/connections'),
+  },
 };
+

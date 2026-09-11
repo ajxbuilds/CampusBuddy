@@ -16,6 +16,7 @@ export interface User {
   department?: string | null;
   phone?: string | null;
   avatar_url?: string | null;
+  auth_provider?: string;
   is_active: boolean;
   created_at: string;
   student_profile?: StudentProfile | null;
@@ -25,6 +26,29 @@ export interface AuthResponse {
   access_token: string;
   token_type: string;
   user: User;
+}
+
+export interface GoogleAuthStatus {
+  configured: boolean;
+  client_id?: string | null;
+  redirect_uri: string;
+}
+
+export interface GoogleAuthUrlResponse {
+  configured: boolean;
+  url?: string | null;
+  message?: string | null;
+}
+
+export interface GoogleOnboardRequest {
+  onboarding_token: string;
+  role: UserRole;
+  department?: string;
+  phone?: string;
+  roll_number?: string;
+  semester?: number;
+  program?: string;
+  linked_student_id?: number;
 }
 
 export interface ComplaintCategory {
@@ -249,4 +273,57 @@ export interface AIChatMessage {
 export interface AIChatResponse {
   reply: string;
   structured_advice?: AIProcedureAdvice | null;
+}
+
+export interface StudyBuddyProfile {
+  id: number;
+  user_id: number;
+  skills?: string;
+  interests?: string;
+  help_areas?: string;
+  goals?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface StudyBuddyProfileCreate {
+  skills?: string;
+  interests?: string;
+  help_areas?: string;
+  goals?: string;
+  is_active: boolean;
+}
+
+export interface StudyBuddyDiscover {
+  profile_id: number;
+  user_id: number;
+  name: string;
+  avatar_url?: string;
+  department?: string;
+  skills?: string;
+  interests?: string;
+  help_areas?: string;
+  goals?: string;
+}
+
+export interface StudyBuddyRequest {
+  id: number;
+  sender_id: number;
+  receiver_id: number;
+  message?: string;
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface StudyBuddyConnection {
+  connection_id: number;
+  connected_at: string;
+  user: {
+    id: number;
+    name: string;
+    avatar_url?: string;
+    department?: string;
+  };
 }

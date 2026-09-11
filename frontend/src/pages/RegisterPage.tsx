@@ -55,10 +55,8 @@ export const RegisterPage: React.FC = () => {
     <div className="min-h-[85vh] flex items-center justify-center p-4">
       <div className="max-w-lg w-full bg-white rounded-3xl border border-slate-200 p-8 shadow-xl">
         <div className="text-center mb-6">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center mx-auto mb-3 shadow-md">
-            <ShieldAlert className="w-6 h-6" />
-          </div>
-          <h2 className="text-2xl font-bold text-slate-900">Create CampusBuddy Account</h2>
+          <img src="/logo.jpg" alt="CampusBuddy" className="h-16 w-auto mx-auto object-contain drop-shadow-md mb-2" />
+          <h2 className="text-xl font-bold text-slate-900 mt-2">Create Account</h2>
           <p className="text-xs text-slate-500 mt-1">Join the transparent college problem solving network</p>
         </div>
 

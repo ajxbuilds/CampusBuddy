@@ -20,6 +20,12 @@ from app.models.community import (
 from app.models.gamification import Badge, UserBadge, PointTransaction
 from app.models.notification import Notification, NotificationType
 from app.models.audit import AuditLog
+from app.models.study_buddy import (
+    StudyBuddyProfile,
+    StudyBuddyRequest,
+    StudyBuddyConnection,
+    ConnectionStatus,
+)
 
 __all__ = [
     "Base",
@@ -46,4 +52,9 @@ __all__ = [
     "Notification",
     "NotificationType",
     "AuditLog",
+    "StudyBuddyProfile",
+    "StudyBuddyRequest",
+    "StudyBuddyConnection",
+    "ConnectionStatus",
 ]
+

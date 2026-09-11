@@ -15,7 +15,9 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True, nullable=False)
-    hashed_password = Column(String, nullable=False)
+    hashed_password = Column(String, nullable=True) # Nullable for OAuth-only users
+    auth_provider = Column(String, default="local", nullable=False) # "local", "google"
+    provider_user_id = Column(String, nullable=True, index=True) # Google 'sub' id
     full_name = Column(String, nullable=False)
     role = Column(Enum(UserRole), nullable=False, default=UserRole.STUDENT)
     department = Column(String, nullable=True) # e.g. "Computer Engineering", "Administration"

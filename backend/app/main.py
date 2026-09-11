@@ -18,6 +18,8 @@ from app.api.ai_assistant import router as ai_router
 from app.api.notifications import router as notifications_router
 from app.api.admin import router as admin_router
 from app.api.analytics import router as analytics_router
+from app.api.study_buddy import router as study_buddy_router
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -26,6 +28,15 @@ async def lifespan(app: FastAPI):
     # Automatically create tables in database
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        from sqlalchemy import text
+        try:
+            await conn.execute(text("ALTER TABLE users ADD COLUMN auth_provider VARCHAR DEFAULT 'local'"))
+        except Exception:
+            pass
+        try:
+            await conn.execute(text("ALTER TABLE users ADD COLUMN provider_user_id VARCHAR"))
+        except Exception:
+            pass
     yield
     # Shutdown: Dispose engine
     await engine.dispose()
@@ -60,6 +71,8 @@ app.include_router(ai_router, prefix=settings.API_V1_STR)
 app.include_router(notifications_router, prefix=settings.API_V1_STR)
 app.include_router(admin_router, prefix=settings.API_V1_STR)
 app.include_router(analytics_router, prefix=settings.API_V1_STR)
+app.include_router(study_buddy_router, prefix=settings.API_V1_STR)
+
 
 @app.get("/health")
 async def health_check():

@@ -1,279 +1,226 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import {
-  ShieldAlert,
-  MessageSquare,
-  Sparkles,
-  Award,
-  Plus,
-  Clock,
-  CheckCircle2,
-  TrendingUp,
-  ArrowRight,
-  Flame,
-  FileText,
-  AlertTriangle,
-} from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
-import { Complaint, CommunityPost, ComplaintCategory, UserBadge } from '../types';
-import { ComplaintCard } from '../components/complaints/ComplaintCard';
-import { NewComplaintModal } from '../components/complaints/NewComplaintModal';
+import { Link } from 'react-router-dom';
+import { LayoutDashboard, MessageSquare, HelpCircle, Trophy, Users, Clock, AlertCircle, ChevronRight, Activity } from 'lucide-react';
+import { Complaint, CommunityPost, LeaderboardResponse } from '../types';
+import { Skeleton } from '../components/ui/Skeleton';
 
-export const StudentDashboard: React.FC = () => {
+export const StudentDashboard = () => {
   const { user } = useAuth();
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [posts, setPosts] = useState<CommunityPost[]>([]);
-  const [categories, setCategories] = useState<ComplaintCategory[]>([]);
-  const [badges, setBadges] = useState<UserBadge[]>([]);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const [cmpData, postData, catData, badgeData] = await Promise.all([
-        api.listComplaints(),
-        api.listPosts({ sort_by: 'trending' }),
-        api.getCategories(),
-        api.getMyBadges(),
-      ]);
-      setComplaints(cmpData);
-      setPosts(postData.slice(0, 3));
-      setCategories(catData);
-      setBadges(badgeData);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [comps, psts, lb] = await Promise.all([
+          api.listComplaints(),
+          api.listPosts(),
+          api.getLeaderboard('monthly')
+        ]);
+        setComplaints(comps.slice(0, 4));
+        setPosts(psts.slice(0, 4));
+        setLeaderboard(lb);
+      } catch (err) {
+        console.error('Failed to load dashboard data', err);
+      } finally {
+        setLoading(false);
+      }
+    };
     loadData();
   }, []);
 
-  const pendingCount = complaints.filter((c) => c.status !== 'RESOLVED' && c.status !== 'CLOSED').length;
-  const resolvedCount = complaints.filter((c) => c.status === 'RESOLVED').length;
-  const escalatedCount = complaints.filter((c) => c.is_escalated || c.status === 'ESCALATED').length;
+  const getStatusColor = (status: string) => {
+    switch(status.toUpperCase()) {
+      case 'RESOLVED': return 'text-emerald-700 bg-emerald-50 border-emerald-200';
+      case 'IN_PROGRESS': return 'text-blue-700 bg-blue-50 border-blue-200';
+      case 'ESCALATED': return 'text-rose-700 bg-rose-50 border-rose-200';
+      case 'REJECTED': return 'text-red-700 bg-red-50 border-red-200';
+      default: return 'text-amber-700 bg-amber-50 border-amber-200';
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="p-6 max-w-7xl mx-auto space-y-8">
+        <div className="space-y-4">
+          <Skeleton className="h-10 w-1/3 rounded-lg" />
+          <Skeleton className="h-4 w-1/4 rounded-lg" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {[1,2,3,4].map(i => <Skeleton key={i} className="h-24 rounded-2xl" />)}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <Skeleton className="h-[400px] lg:col-span-2 rounded-2xl" />
+          <Skeleton className="h-[400px] rounded-2xl" />
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      {/* Welcome Banner */}
-      <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden">
+    <div className="p-6 max-w-7xl mx-auto space-y-8">
+      {/* Header Section */}
+      <div className="bg-slate-900 rounded-3xl p-8 text-white flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden">
+        <div className="absolute top-0 right-0 p-12 opacity-10 pointer-events-none">
+          <Activity className="w-64 h-64 text-white" />
+        </div>
         <div className="relative z-10">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="px-3 py-1 bg-white/20 backdrop-blur rounded-full text-xs font-semibold uppercase tracking-wider">
-              Student Hub
-            </span>
-            <span className="text-xs text-blue-200">
-              Roll: {user?.student_profile?.roll_number || 'CS2023042'} &bull; Sem {user?.student_profile?.semester || 4}
+          <div className="flex items-center gap-2 mb-3">
+            <span className="px-3 py-1 bg-white/20 backdrop-blur rounded-full text-xs font-bold uppercase tracking-wider text-blue-50">
+              CampusBuddy Home
             </span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
-            Welcome back, {user?.full_name}!
+          <h1 className="text-3xl sm:text-4xl font-black tracking-tight mb-2">
+            Welcome back, {user?.full_name?.split(' ')[0]} 👋
           </h1>
-          <p className="text-sm text-blue-100 max-w-xl mt-1 leading-relaxed">
-            Need guidance, peer answers, or want to track a campus grievance? Connect with the college problem-solving system below.
+          <p className="text-slate-300 max-w-xl text-sm leading-relaxed">
+            Stay updated with your campus community. Help peers, track your requests, and climb the leaderboard!
           </p>
+        </div>
+        <div className="relative z-10 flex gap-4 bg-white/10 backdrop-blur border border-white/20 p-4 rounded-2xl">
+          <div className="text-center px-4">
+            <span className="block text-2xl font-black text-white">{leaderboard?.leaders.find(e => e.user_id === user?.id)?.points || 0}</span>
+            <span className="block text-[10px] uppercase font-bold text-blue-200">Rep Points</span>
+          </div>
+          <div className="w-px bg-white/20"></div>
+          <div className="text-center px-4">
+            <span className="block text-2xl font-black text-white">{complaints.length}</span>
+            <span className="block text-[10px] uppercase font-bold text-blue-200">Active Issues</span>
+          </div>
+        </div>
+      </div>
 
-          {/* Badges preview */}
-          {badges.length > 0 && (
-            <div className="flex items-center gap-2 mt-4 flex-wrap">
-              <span className="text-xs text-blue-200 font-semibold">Earned Badges:</span>
-              {badges.map((b) => (
-                <span
-                  key={b.id}
-                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white/15 border border-white/20 text-xs font-semibold text-white"
-                >
-                  🏅 {b.badge?.name}
-                </span>
-              ))}
+      {/* Quick Nav Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Link to="/community" className="group bg-white p-5 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md hover:border-blue-300 transition-all">
+          <div className="flex flex-col gap-4">
+            <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+              <MessageSquare className="w-5 h-5"/>
             </div>
-          )}
-        </div>
-
-        {/* Quick Action CTA Group */}
-        <div className="relative z-10 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
-          <Link
-            to="/ai-assistant"
-            className="px-4 py-3 bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur text-white text-xs font-bold rounded-2xl flex items-center justify-center gap-2 transition shadow-sm"
-          >
-            <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
-            AI Guide
-          </Link>
-
-          <Link
-            to="/community"
-            className="px-4 py-3 bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur text-white text-xs font-bold rounded-2xl flex items-center justify-center gap-2 transition shadow-sm"
-          >
-            <MessageSquare className="w-4 h-4 text-indigo-200" />
-            Peer Community
-          </Link>
-
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="px-5 py-3 bg-white text-blue-800 hover:bg-blue-50 text-xs font-black rounded-2xl shadow-lg flex items-center justify-center gap-2 transition hover:scale-105"
-          >
-            <Plus className="w-4 h-4 text-blue-600" />
-            File Complaint
-          </button>
-        </div>
-
-        {/* Glow */}
-        <div className="absolute -right-20 -top-20 w-72 h-72 rounded-full bg-indigo-500/30 blur-3xl pointer-events-none" />
-      </div>
-
-      {/* KPI Metric Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-            <Clock className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Active Tickets</p>
-            <p className="text-2xl font-black text-slate-900 mt-0.5">{pendingCount}</p>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-            <CheckCircle2 className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Resolved</p>
-            <p className="text-2xl font-black text-slate-900 mt-0.5">{resolvedCount}</p>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-            <Flame className="w-6 h-6 text-amber-500 fill-amber-500" />
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Reputation Points</p>
-            <p className="text-2xl font-black text-slate-900 mt-0.5">
-              {user?.student_profile?.total_points || 0}
-            </p>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
-            <TrendingUp className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Escalations</p>
-            <p className="text-2xl font-black text-slate-900 mt-0.5">{escalatedCount}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Grid: My Complaints & Community Highlights */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left 2 Cols: My Complaints */}
-        <div className="lg:col-span-2 space-y-4">
-          <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-bold text-slate-900">My Registered Complaints</h2>
-              <p className="text-xs text-slate-500">Live SLA countdown and department status</p>
+              <h3 className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors">Discussions</h3>
+              <p className="text-xs text-slate-500 mt-0.5">Join the conversation</p>
             </div>
-            <Link
-              to="/complaints"
-              className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition"
-            >
-              View all ({complaints.length}) <ArrowRight className="w-3.5 h-3.5" />
+          </div>
+        </Link>
+        <Link to="/complaints" className="group bg-white p-5 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md hover:border-blue-300 transition-all">
+          <div className="flex flex-col gap-4">
+            <div className="w-10 h-10 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+              <AlertCircle className="w-5 h-5"/>
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors">Issues</h3>
+              <p className="text-xs text-slate-500 mt-0.5">Track and report</p>
+            </div>
+          </div>
+        </Link>
+        <Link to="/study-buddy" className="group bg-white p-5 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md hover:border-blue-300 transition-all">
+          <div className="flex flex-col gap-4">
+            <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Users className="w-5 h-5"/>
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors">Study Buddy</h3>
+              <p className="text-xs text-slate-500 mt-0.5">Find your peers</p>
+            </div>
+          </div>
+        </Link>
+        <Link to="/leaderboard" className="group bg-white p-5 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md hover:border-blue-300 transition-all">
+          <div className="flex flex-col gap-4">
+            <div className="w-10 h-10 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Trophy className="w-5 h-5"/>
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors">Rankings</h3>
+              <p className="text-xs text-slate-500 mt-0.5">View top contributors</p>
+            </div>
+          </div>
+        </Link>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Main Feed Activity */}
+        <div className="lg:col-span-2 space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-black text-slate-900 flex items-center gap-2">
+              <Activity className="w-5 h-5 text-blue-600" /> Community Pulse
+            </h2>
+            <Link to="/community" className="text-sm font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1">
+              View all <ChevronRight className="w-4 h-4" />
             </Link>
           </div>
-
-          {loading ? (
-            <div className="p-12 text-center text-xs text-slate-400 bg-white rounded-3xl border border-slate-200">
-              Loading complaints...
-            </div>
-          ) : complaints.length === 0 ? (
-            <div className="p-12 text-center bg-white rounded-3xl border border-slate-200 space-y-3">
-              <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
-                <FileText className="w-6 h-6" />
-              </div>
-              <h4 className="text-sm font-bold text-slate-800">No Complaints Registered</h4>
-              <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                Have a fee discrepancy, hostel problem, or exam question? Submit a structured complaint to get official resolution.
-              </p>
-              <button
-                onClick={() => setIsModalOpen(true)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold shadow-md hover:bg-blue-700 transition"
-              >
-                Register Your First Complaint
-              </button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {complaints.slice(0, 4).map((c) => (
-                <ComplaintCard key={c.id} complaint={c} />
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Right 1 Col: Community & AI Banner */}
-        <div className="space-y-6">
-          {/* AI Banner Card */}
-          <div className="p-6 rounded-3xl bg-gradient-to-br from-indigo-500 to-blue-600 text-white shadow-lg space-y-3">
-            <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-amber-300" />
-            </div>
-            <h3 className="text-base font-bold">Unsure about college procedures?</h3>
-            <p className="text-xs text-blue-100 leading-relaxed">
-              Ask our AI Assistant to find the right department, documents required, and whether peer help or formal grievance is recommended.
-            </p>
-            <Link
-              to="/ai-assistant"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-white text-blue-900 rounded-xl text-xs font-bold hover:bg-blue-50 transition shadow-sm"
-            >
-              Start AI Diagnostic <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-
-          {/* Trending Community Q&A */}
-          <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="text-sm font-bold text-slate-900">Trending Peer Questions</h3>
-              <Link to="/community" className="text-xs font-semibold text-blue-600 hover:underline">
-                Explore
-              </Link>
-            </div>
-
-            <div className="space-y-3 divide-y divide-slate-50">
-              {posts.map((p) => (
-                <div key={p.id} className="pt-2 first:pt-0">
-                  <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider block mb-1">
-                    {p.category}
-                  </span>
-                  <Link
-                    to={`/community/${p.id}`}
-                    className="text-xs font-bold text-slate-800 hover:text-blue-600 transition line-clamp-1 block"
-                  >
-                    {p.title}
-                  </Link>
-                  <div className="flex items-center gap-3 text-[11px] text-slate-400 mt-1">
-                    <span>{p.upvotes_count} upvotes</span>
-                    <span>&bull;</span>
-                    <span>{p.answers_count} answers</span>
+          
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden divide-y divide-slate-100">
+            {posts.length > 0 ? posts.map(p => (
+              <div key={p.id} className="p-6 hover:bg-slate-50 transition-colors">
+                <div className="flex justify-between items-start gap-4">
+                  <div className="space-y-1">
+                    <span className="inline-block px-2.5 py-1 bg-slate-100 text-slate-600 text-[10px] font-bold uppercase tracking-wider rounded-md">
+                      {p.category}
+                    </span>
+                    <Link to={'/community/' + p.id} className="block text-lg font-bold text-slate-900 hover:text-blue-600 mt-1">
+                      {p.title}
+                    </Link>
+                    <p className="text-sm text-slate-500 line-clamp-2 mt-2">{p.content}</p>
+                  </div>
+                  <div className="flex flex-col items-center bg-slate-50 border border-slate-100 rounded-xl p-2 min-w-[3rem]">
+                    <span className="text-xs text-slate-400 font-bold mb-1">▲</span>
+                    <span className="font-black text-slate-700">{p.upvotes_count}</span>
                   </div>
                 </div>
-              ))}
-            </div>
+                <div className="flex items-center gap-4 mt-4 text-xs font-semibold text-slate-400">
+                  <span className="flex items-center gap-1"><MessageSquare className="w-3.5 h-3.5" /> Discuss</span>
+                  <span>•</span>
+                  <span>Posted by {p.author?.full_name}</span>
+                </div>
+              </div>
+            )) : (
+              <div className="p-8 text-center text-slate-500 text-sm font-medium">No recent discussions. Start one!</div>
+            )}
+          </div>
+        </div>
+        
+        {/* Sidebar: Complaints & Updates */}
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-black text-slate-900 flex items-center gap-2">
+              <Clock className="w-5 h-5 text-amber-500" /> My Requests
+            </h2>
+            <Link to="/complaints" className="text-sm font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1">
+              All <ChevronRight className="w-4 h-4" />
+            </Link>
+          </div>
+
+          <div className="space-y-4">
+            {complaints.length > 0 ? complaints.map(c => (
+              <Link to={'/complaints/' + c.id} key={c.id} className="block bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-blue-200 transition-all group">
+                <div className="flex items-start justify-between mb-3">
+                  <span className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md border ${getStatusColor(c.status)}`}>
+                    {c.status.replace('_', ' ')}
+                  </span>
+                  <span className="text-xs font-bold text-slate-400">{new Date(c.created_at).toLocaleDateString()}</span>
+                </div>
+                <h3 className="font-bold text-slate-900 group-hover:text-blue-600 line-clamp-2 leading-snug">{c.title}</h3>
+                <div className="mt-3 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-slate-300"></span>
+                  <span className="text-xs font-semibold text-slate-500">{c.complaint_code}</span>
+                </div>
+              </Link>
+            )) : (
+              <div className="bg-slate-50 rounded-2xl p-6 text-center border border-slate-200 border-dashed">
+                <HelpCircle className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                <p className="text-sm font-semibold text-slate-600">No active complaints</p>
+                <p className="text-xs text-slate-400 mt-1">Everything looks good!</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
-
-      {/* New Complaint Modal */}
-      <NewComplaintModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        categories={categories}
-        onCreated={() => loadData()}
-      />
     </div>
   );
 };
+

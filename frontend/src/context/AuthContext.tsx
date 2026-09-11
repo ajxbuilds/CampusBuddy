@@ -22,7 +22,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const refreshUser = async () => {
     try {
-      if (localStorage.getItem('cb_token')) {
+      const storedToken = localStorage.getItem('cb_token');
+      if (storedToken) {
+        setToken(storedToken);
         const me = await api.getMe();
         setUser(me);
       }

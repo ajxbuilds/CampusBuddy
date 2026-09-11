@@ -15,7 +15,21 @@ import {
   Eye,
   FileSpreadsheet,
   Activity,
+  PieChart as PieIcon,
 } from 'lucide-react';
+import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+  Legend,
+  Cell,
+} from 'recharts';
 import { api } from '../services/api';
 import {
   AdminStats,
@@ -98,6 +112,21 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        <div className="h-40 bg-slate-200 animate-pulse rounded-3xl w-full"></div>
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+          {[1,2,3,4,5].map(i => <div key={i} className="h-28 bg-slate-200 animate-pulse rounded-3xl"></div>)}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="h-80 bg-slate-200 animate-pulse rounded-3xl"></div>
+          <div className="h-80 bg-slate-200 animate-pulse rounded-3xl"></div>
+        </div>
+      </div>
+    );
+  }
+
   const filteredComplaints = complaints.filter((c) => {
     const matchesSearch =
       c.title.toLowerCase().includes(searchFilter.toLowerCase()) ||
@@ -110,20 +139,23 @@ export const AdminDashboard: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-purple-900 via-indigo-950 to-slate-950 rounded-3xl p-6 sm:p-8 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div>
+      <div className="bg-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6 overflow-hidden relative">
+        <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+          <ShieldAlert className="w-64 h-64 text-white" />
+        </div>
+        <div className="relative z-10">
           <div className="flex items-center gap-2 mb-2">
-            <span className="px-3 py-1 bg-white/20 backdrop-blur rounded-full text-xs font-semibold uppercase tracking-wider">
+            <span className="px-3 py-1 bg-blue-600/30 text-blue-200 border border-blue-500/30 backdrop-blur rounded-full text-xs font-bold uppercase tracking-wider">
               Administration Control Center
             </span>
-            <span className="text-xs text-purple-200">
-              Dean &bull; Grievance Cell Oversight
+            <span className="text-xs font-semibold text-slate-400">
+              Admin &bull; Grievance Cell Oversight
             </span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight mb-1 text-white">
             Campus Problem Resolution Command
           </h1>
-          <p className="text-sm text-purple-100 max-w-xl mt-1 leading-relaxed">
+          <p className="text-sm text-slate-300 max-w-xl mt-1 leading-relaxed">
             Monitor college SLAs, assign complaints, resolve escalations, and moderate community contributions.
           </p>
         </div>
@@ -169,6 +201,8 @@ export const AdminDashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* Institutional Financial Health Summary removed */}
+
       {/* Visual Charts / Analytics Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Complaints by Category Breakdown */}
@@ -176,32 +210,51 @@ export const AdminDashboard: React.FC = () => {
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
             <div>
               <h3 className="text-base font-bold text-slate-900">Complaints by Category</h3>
-              <p className="text-xs text-slate-500">Volume and resolution distribution</p>
+              <p className="text-xs text-slate-500">Volume vs resolution distribution by domain</p>
             </div>
-            <BarChart3 className="w-5 h-5 text-slate-400" />
+            <BarChart3 className="w-5 h-5 text-purple-600" />
           </div>
 
-          <div className="space-y-3">
-            {catDistribution.slice(0, 6).map((cat) => {
-              const maxVal = Math.max(...catDistribution.map((c) => c.count), 1);
-              const percentage = Math.round((cat.count / maxVal) * 100);
-              return (
-                <div key={cat.category} className="space-y-1">
-                  <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
-                    <span>{cat.category}</span>
-                    <span>
-                      {cat.count} total ({cat.resolved_count} resolved)
-                    </span>
-                  </div>
-                  <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden flex">
-                    <div
-                      className="bg-blue-600 h-2.5 rounded-full transition-all duration-500"
-                      style={{ width: `${percentage}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
+          <div className="h-64 w-full pt-2">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={catDistribution.map((c) => ({
+                  name: c.category.length > 12 ? c.category.substring(0, 10) + '..' : c.category,
+                  fullName: c.category,
+                  Total: c.count,
+                  Resolved: c.resolved_count,
+                }))}
+                margin={{ top: 10, right: 10, left: -20, bottom: 20 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                <XAxis
+                  dataKey="name"
+                  tick={{ fontSize: 10, fill: '#64748b' }}
+                  interval={0}
+                  angle={-20}
+                  textAnchor="end"
+                />
+                <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: '#64748b' }} />
+                <RechartsTooltip
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      const data = payload[0].payload;
+                      return (
+                        <div className="bg-slate-900 text-white p-2.5 rounded-xl text-xs shadow-lg space-y-1">
+                          <p className="font-bold text-purple-300">{data.fullName}</p>
+                          <p className="text-slate-200">Total: <span className="font-bold text-white">{data.Total}</span></p>
+                          <p className="text-emerald-400">Resolved: <span className="font-bold text-white">{data.Resolved}</span></p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Legend wrapperStyle={{ fontSize: 11, paddingTop: 10 }} />
+                <Bar dataKey="Total" fill="#818cf8" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Resolved" fill="#10b981" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </div>
 
@@ -209,26 +262,47 @@ export const AdminDashboard: React.FC = () => {
         <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
             <div>
-              <h3 className="text-base font-bold text-slate-900">7-Day Filing vs Resolution Trends</h3>
-              <p className="text-xs text-slate-500">Daily intake velocity</p>
+              <h3 className="text-base font-bold text-slate-900">7-Day Filing Intake Velocity</h3>
+              <p className="text-xs text-slate-500">Daily incoming ticket trajectory</p>
             </div>
             <TrendingUp className="w-5 h-5 text-indigo-500" />
           </div>
 
-          <div className="grid grid-cols-7 gap-2 pt-6 h-48 items-end">
-            {trends.map((t, idx) => {
-              const barHeight = Math.min(100, Math.max(15, t.count * 30));
-              return (
-                <div key={idx} className="flex flex-col items-center gap-2 h-full justify-end">
-                  <span className="text-[10px] font-bold text-slate-600">{t.count}</span>
-                  <div
-                    className="w-full bg-gradient-to-t from-blue-600 to-indigo-500 rounded-t-lg transition-all"
-                    style={{ height: `${barHeight}%` }}
-                  />
-                  <span className="text-[10px] text-slate-400 whitespace-nowrap">{t.date}</span>
-                </div>
-              );
-            })}
+          <div className="h-64 w-full pt-2">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart
+                data={trends.map((t) => ({
+                  date: t.date,
+                  Tickets: t.count,
+                }))}
+                margin={{ top: 10, right: 15, left: -20, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#64748b' }} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: '#64748b' }} domain={[0, 'dataMax + 2']} />
+                <RechartsTooltip
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      return (
+                        <div className="bg-slate-900 text-white p-2 rounded-lg text-xs shadow-lg">
+                          <p className="font-semibold text-slate-300">{payload[0].payload.date}</p>
+                          <p className="text-indigo-300 font-bold">{payload[0].value} New Tickets</p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="Tickets"
+                  stroke="#6366f1"
+                  strokeWidth={3}
+                  dot={{ r: 4, fill: '#4f46e5', stroke: '#fff', strokeWidth: 2 }}
+                  activeDot={{ r: 6 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
           </div>
         </div>
       </div>
@@ -469,3 +543,5 @@ export const AdminDashboard: React.FC = () => {
     </div>
   );
 };
+
+

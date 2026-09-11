@@ -25,6 +25,7 @@ class UserBase(BaseModel):
     department: Optional[str] = None
     phone: Optional[str] = None
     avatar_url: Optional[str] = None
+    auth_provider: Optional[str] = "local"
 
 class UserCreate(UserBase):
     password: str
@@ -58,3 +59,23 @@ class Token(BaseModel):
 
 class TokenPayload(BaseModel):
     sub: Optional[str] = None
+
+class GoogleAuthUrlResponse(BaseModel):
+    configured: bool
+    url: Optional[str] = None
+    message: Optional[str] = None
+
+class GoogleOnboardInfo(BaseModel):
+    email: str
+    name: str
+    avatar_url: Optional[str] = None
+
+class GoogleOnboardRequest(BaseModel):
+    onboarding_token: str
+    role: UserRole
+    department: Optional[str] = None
+    phone: Optional[str] = None
+    roll_number: Optional[str] = None
+    semester: Optional[int] = 1
+    program: Optional[str] = "B.Tech Computer Science"
+    linked_student_id: Optional[int] = None

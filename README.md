@@ -166,7 +166,7 @@ Follow this exact flow during project defense to demonstrate all 14 milestones w
 6. **Live Chronological Timeline**:
    - Open the complaint detail view to inspect the visual resolution progress timeline.
 7. **Switch to Administrator / Faculty**:
-   - Using the top-right demo switcher, switch to **Admin (Dean Dr. S. K. Rao)**.
+   - Using the top-right demo switcher, switch to **Admin User**.
    - Navigate to `/admin`: view real-time KPIs (Total, Pending, In Progress, Escalated), Category volume charts, and 7-day Intake velocity.
    - Assign the newly submitted complaint to **Prof. Vikram Malhotra (Teacher)** and change status to `IN_PROGRESS`.
 8. **Student Notification & Escalation**:
@@ -204,6 +204,59 @@ Follow this exact flow during project defense to demonstrate all 14 milestones w
 
 - **Q: How are SLAs enforced?**  
   *A: Each category defines an SLA threshold in hours. The backend calculates `sla_deadline = created_at + sla_hours`. The system automatically detects SLA breaches, flagging overdue complaints and unlocking the student escalation trigger.*
+
+---
+
+## 🔑 Google OAuth 2.0 & Gmail Sign-In Setup
+
+CampusBuddy supports **dual authentication**:
+1. **Traditional Email + Password** (Default, with Bcrypt hashing and 1-Click Demo Accounts)
+2. **Continue with Google** (Official Google OAuth 2.0 / OpenID Connect with account linking)
+
+### Google Cloud Console Configuration Steps
+
+1. **Visit Google Cloud Console**:
+   Navigate to [console.cloud.google.com](https://console.cloud.google.com/) and create or select a project (e.g., `CampusBuddy`).
+
+2. **Configure OAuth Consent Screen**:
+   - Go to **APIs & Services** → **OAuth consent screen**.
+   - User Type: Select **External** and click **Create**.
+   - App Information:
+     - App name: `CampusBuddy`
+     - User support email: Select your email
+     - Developer contact info: Enter your email
+   - Scopes: Click **Add or Remove Scopes** and select:
+     - `.../auth/userinfo.email`
+     - `.../auth/userinfo.profile`
+     - `openid`
+   - Save and continue.
+
+3. **Create OAuth Client ID Credentials**:
+   - Go to **APIs & Services** → **Credentials**.
+   - Click **+ CREATE CREDENTIALS** → **OAuth client ID**.
+   - Application type: **Web application**.
+   - Name: `CampusBuddy Web Client`.
+   - **Authorized JavaScript origins**:
+     - `http://localhost:5173`
+     - `http://localhost:8000`
+   - **Authorized redirect URIs**:
+     - `http://localhost:8000/api/auth/google/callback`
+   - Click **CREATE**.
+
+4. **Add Credentials to Backend Environment**:
+   Copy the generated **Client ID** and **Client Secret** into `backend/.env`:
+   ```env
+   GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+   GOOGLE_CLIENT_SECRET=GOCSPX-your-client-secret
+   GOOGLE_REDIRECT_URI=http://localhost:8000/api/auth/google/callback
+   FRONTEND_URL=http://localhost:5173
+   ```
+
+5. **Authentication Security & Account Linking**:
+   - **Existing User Linking**: If a user previously registered with email/password (e.g. `student@campusbuddy.edu`) logs in with Google, CampusBuddy automatically links the Google provider ID (`sub`), updates their avatar, and logs them in seamlessly without erasing complaints, points, or badges.
+   - **New User Onboarding**: New Google sign-ups are routed to an onboarding screen to select their campus role (`Student`, `Teacher`, or `Parent`) and fill out academic details.
+   - **Strict Admin Security Guard**: Administrator (`ADMIN`) accounts **cannot** be registered through public Google sign-up. Any attempt to onboard with the `ADMIN` role is blocked at the API level with HTTP `403 Forbidden`.
+   - **Local Developer Simulation**: If Google Cloud credentials are not yet configured, developers can click "Try Google OAuth Simulation (Dev Mode)" in the login dialog or use `/api/auth/google/dev-simulate` to test the complete OAuth callback and onboarding flow offline.
 
 ---
 

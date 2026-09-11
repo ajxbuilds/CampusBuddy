@@ -16,6 +16,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { CommunityPost, CommunityAnswer } from '../types';
+import { Skeleton } from '../components/ui/Skeleton';
 
 export const QuestionDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -104,8 +105,19 @@ export const QuestionDetailPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-16 text-center text-xs text-slate-400">
-        Loading question thread...
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        <Skeleton className="h-4 w-32" />
+        <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm flex items-start gap-5">
+          <Skeleton className="h-14 w-12 rounded-2xl shrink-0" />
+          <div className="flex-1 space-y-4">
+            <Skeleton className="h-6 w-3/4" />
+            <Skeleton className="h-24 w-full" />
+            <div className="flex justify-between border-t border-slate-100 pt-4">
+              <Skeleton className="h-6 w-48" />
+              <Skeleton className="h-6 w-32" />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

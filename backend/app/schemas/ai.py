@@ -8,6 +8,9 @@ class AIChatMessage(BaseModel):
 class AIChatRequest(BaseModel):
     messages: List[AIChatMessage]
     context_category: Optional[str] = None
+    current_page: Optional[str] = None
+    quick_action: Optional[str] = None
+
 
 class AIProcedureAdvice(BaseModel):
     suggested_category: Optional[str] = None
