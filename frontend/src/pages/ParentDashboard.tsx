@@ -9,17 +9,43 @@ import { Skeleton } from '../components/ui/Skeleton';
 export const ParentDashboard = () => {
   const { user } = useAuth();
   const [complaints, setComplaints] = useState<Complaint[]>([]);
-  const [ward, setWard] = useState<User | null>(null);
+  const [wards, setWards] = useState<User[]>([]);
+  const [activeWardId, setActiveWardId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [linkCode, setLinkCode] = useState('');
+  const [linking, setLinking] = useState(false);
+  const [linkError, setLinkError] = useState<string|null>(null);
+  const [linkSuccess, setLinkSuccess] = useState<string|null>(null);
+
+  const handleLinkStudent = async () => {
+    if (!linkCode.trim()) return;
+    setLinking(true);
+    setLinkError(null);
+    setLinkSuccess(null);
+    try {
+      const res = await api.linkParent(linkCode);
+      setLinkSuccess(res.message);
+      const ws = await api.getLinkedStudents();
+      setWards(ws);
+      if (ws.length > 0 && !activeWardId) setActiveWardId(ws[0].id);
+      setLinkCode('');
+    } catch(err: any) {
+      setLinkError(err.message || 'Failed to link student.');
+    } finally {
+      setLinking(false);
+    }
+  };
+
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [w, comps] = await Promise.all([
-          api.getLinkedStudent(),
-          api.listComplaints() // Assuming backend filters by parent's ward
-        ]);
-        setWard(w);
+        const [ws, comps] = await Promise.all([
+            api.getLinkedStudents(),
+            api.listComplaints()
+          ]);
+          setWards(ws);
+          if (ws.length > 0) setActiveWardId(ws[0].id);
         setComplaints(comps.slice(0, 5));
       } catch (err) {
         console.error('Failed to load dashboard data', err);
@@ -29,6 +55,8 @@ export const ParentDashboard = () => {
     };
     loadData();
   }, []);
+
+  const ward = wards.find(w => w.id === activeWardId) || null;
 
   const getStatusColor = (status: string) => {
     switch(status.toUpperCase()) {

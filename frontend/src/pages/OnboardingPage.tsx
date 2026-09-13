@@ -33,7 +33,7 @@ export const OnboardingPage: React.FC = () => {
   const [semester, setSemester] = useState(1);
   const [program, setProgram] = useState('B.Tech Computer Science');
   const [phone, setPhone] = useState('');
-  const [linkedStudentId, setLinkedStudentId] = useState<number | ''>('');
+  const [parentLinkCode, setParentLinkCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -97,7 +97,7 @@ export const OnboardingPage: React.FC = () => {
         roll_number: selectedRole === 'STUDENT' ? rollNumber : undefined,
         semester: selectedRole === 'STUDENT' ? semester : undefined,
         program: selectedRole === 'STUDENT' ? program : undefined,
-        linked_student_id: selectedRole === 'PARENT' && linkedStudentId ? Number(linkedStudentId) : undefined,
+        parent_link_code: selectedRole === 'PARENT' ? parentLinkCode : undefined,
       });
 
       localStorage.setItem('cb_token', resp.access_token);
@@ -394,15 +394,15 @@ export const OnboardingPage: React.FC = () => {
                   Linked Student Ward User ID (Optional)
                 </label>
                 <input
-                  type="number"
-                  value={linkedStudentId}
-                  onChange={(e) => setLinkedStudentId(e.target.value ? Number(e.target.value) : '')}
-                  placeholder="e.g. 1 (Aarav Sharma)"
-                  className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:outline-none"
-                />
-                <p className="text-[10px] text-slate-400 mt-1">
-                  Connects your guardian account for real-time tracking of your ward's grievances.
-                </p>
+                    type="text"
+                    value={parentLinkCode}
+                    onChange={(e) => setParentLinkCode(e.target.value.toUpperCase())}
+                    placeholder="CB-XXXX-XXXX"
+                    className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:outline-none uppercase font-mono"
+                  />
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    Enter the unique link code provided by your student.
+                  </p>
               </div>
             </div>
           )}
@@ -420,3 +420,4 @@ export const OnboardingPage: React.FC = () => {
     </div>
   );
 };
+

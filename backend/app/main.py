@@ -87,3 +87,5 @@ async def root():
     return {
         "message": "Welcome to CampusBuddy API. Visit /docs for Swagger documentation."
     }
+
+# Trigger reload

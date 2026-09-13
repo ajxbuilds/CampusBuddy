@@ -26,7 +26,7 @@ export const ParentLoginPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      await login(email, password);
+      await login(email, password, 'PARENT');
       navigate('/parent');
     } catch (err: any) {
       setError(err.message || 'Invalid credentials.');

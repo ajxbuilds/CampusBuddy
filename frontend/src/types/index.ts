@@ -48,7 +48,7 @@ export interface GoogleOnboardRequest {
   roll_number?: string;
   semester?: number;
   program?: string;
-  linked_student_id?: number;
+  parent_link_code?: string;
 }
 
 export interface ComplaintCategory {
@@ -327,3 +327,10 @@ export interface StudyBuddyConnection {
     department?: string;
   };
 }
+
+export interface ParentLinkCodeResponse {
+  code: string;
+  expires_at: string;
+  is_active: boolean;
+}
+

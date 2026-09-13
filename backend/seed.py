@@ -75,7 +75,7 @@ async def seed_database():
         admin = User(
             email="admin@campusbuddy.edu",
             hashed_password=get_password_hash("Admin@123"),
-            full_name="System Admin",
+            full_name="Admin",
             role=UserRole.ADMIN,
             department="Central Administration",
             phone="+91 98765 43210",

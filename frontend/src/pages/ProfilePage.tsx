@@ -12,19 +12,51 @@ import {
   Clock,
   BookOpen,
   GraduationCap,
-  Users,
+  Users, Link, Copy, RefreshCw,
   Building,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { UserBadge, PointTransaction } from '../types';
 import { Skeleton } from '../components/ui/Skeleton';
+import { ParentLinkCodeResponse } from '../types';
 
 export const ProfilePage: React.FC = () => {
   const { user } = useAuth();
   const [badges, setBadges] = useState<UserBadge[]>([]);
   const [transactions, setTransactions] = useState<PointTransaction[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const [parentCode, setParentCode] = useState<ParentLinkCodeResponse | null>(null);
+  const [generatingCode, setGeneratingCode] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (user?.role === 'STUDENT') {
+      api.getParentLinkCode().then(setParentCode).catch(console.error);
+    }
+  }, [user]);
+
+  const handleGenerateCode = async () => {
+    setGeneratingCode(true);
+    try {
+      const newCode = await api.generateParentLinkCode();
+      setParentCode(newCode);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setGeneratingCode(false);
+    }
+  };
+
+  const handleCopy = () => {
+    if (parentCode) {
+      navigator.clipboard.writeText(parentCode.code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
 
   useEffect(() => {
     const loadProfileData = async () => {
@@ -229,8 +261,67 @@ export const ProfilePage: React.FC = () => {
             </table>
           </div>
         )}
+
+        {/* Parent Access Section */}
+        {user?.role === 'STUDENT' && (
+          <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                <Link className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">Parent Access</h2>
+                <p className="text-xs text-slate-500">Link a parent to your CampusBuddy account.</p>
+              </div>
+            </div>
+
+            {parentCode ? (
+              <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 text-center">
+                <p className="text-sm font-semibold text-slate-700 mb-2">Parent Link Code</p>
+                <div className="text-2xl font-mono font-black text-slate-900 tracking-widest mb-4">
+                  {parentCode.code}
+                </div>
+                <div className="flex items-center justify-center gap-3">
+                  <button 
+                    onClick={handleCopy}
+                    className="px-4 py-2 text-xs font-bold rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 transition flex items-center gap-2 shadow-sm"
+                  >
+                    {copied ? <CheckCircle2 className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    {copied ? 'Copied!' : 'Copy Code'}
+                  </button>
+                  <button 
+                    onClick={handleGenerateCode}
+                    disabled={generatingCode}
+                    className="px-4 py-2 text-xs font-bold rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition flex items-center gap-2"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${generatingCode ? 'animate-spin' : ''}`} />
+                    Regenerate
+                  </button>
+                </div>
+                <p className="text-[10px] text-slate-400 mt-4">
+                  Share this code with your parent to link their CampusBuddy account. Expires in 48 hours.
+                </p>
+              </div>
+            ) : (
+              <div className="text-center p-6 border-2 border-dashed border-slate-200 rounded-2xl">
+                <p className="text-sm text-slate-600 mb-4">Your parent has not been linked yet.</p>
+                <button
+                  onClick={handleGenerateCode}
+                  disabled={generatingCode}
+                  className="px-5 py-2.5 text-sm font-bold rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 transition shadow-sm inline-flex items-center gap-2"
+                >
+                  {generatingCode ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Link className="w-4 h-4" />}
+                  Generate Parent Link Code
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
 };
+
+
+
 

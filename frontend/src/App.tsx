@@ -22,6 +22,12 @@ import { StudentDashboard } from './pages/StudentDashboard';
 import { TeacherDashboard } from './pages/TeacherDashboard';
 import { ParentDashboard } from './pages/ParentDashboard';
 import { AdminDashboard } from './pages/AdminDashboard';
+import { 
+  AdminUsersPage, AdminParentLinksPage, AdminComplaintsPage, AdminEscalationsPage, 
+  AdminCommunityPage, AdminReportsPage, AdminContributionsPage, AdminSystemPage, 
+  AdminImportPage, AdminAuditLogsPage 
+} from './pages/admin/AdminPages';
+
 
 // Community & Support Pages
 import { ComplaintsPage } from './pages/ComplaintsPage';
@@ -32,7 +38,7 @@ import { AIAssistantPage } from './pages/AIAssistantPage';
 import { LeaderboardPage } from './pages/LeaderboardPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { StudyBuddyPage } from './pages/StudyBuddyPage';
-
+import { NotificationsPage } from './pages/NotificationsPage';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode; allowedRoles?: string[] }> = ({
@@ -121,9 +127,21 @@ export const App: React.FC = () => {
           <Route path="/admin/dashboard" element={<Navigate to="/admin" replace />} />
 
           {/* Role-Specific Dashboards */}
-          <Route path="/teacher" element={<AuthenticatedLayout allowedRoles={['TEACHER', 'ADMIN']}><TeacherDashboard /></AuthenticatedLayout>} />
-          <Route path="/parent" element={<AuthenticatedLayout allowedRoles={['PARENT', 'ADMIN']}><ParentDashboard /></AuthenticatedLayout>} />
+          <Route path="/teacher" element={<AuthenticatedLayout allowedRoles={['TEACHER']}><TeacherDashboard /></AuthenticatedLayout>} />
+          <Route path="/parent" element={<AuthenticatedLayout allowedRoles={['PARENT']}><ParentDashboard /></AuthenticatedLayout>} />
+          
           <Route path="/admin" element={<AuthenticatedLayout allowedRoles={['ADMIN']}><AdminDashboard /></AuthenticatedLayout>} />
+          <Route path="/admin/users" element={<AuthenticatedLayout allowedRoles={['ADMIN']}><AdminUsersPage /></AuthenticatedLayout>} />
+          <Route path="/admin/parent-links" element={<AuthenticatedLayout allowedRoles={['ADMIN']}><AdminParentLinksPage /></AuthenticatedLayout>} />
+          <Route path="/admin/community" element={<AuthenticatedLayout allowedRoles={['ADMIN']}><AdminCommunityPage /></AuthenticatedLayout>} />
+          <Route path="/admin/reports" element={<AuthenticatedLayout allowedRoles={['ADMIN']}><AdminReportsPage /></AuthenticatedLayout>} />
+          <Route path="/admin/complaints" element={<AuthenticatedLayout allowedRoles={['ADMIN']}><AdminComplaintsPage /></AuthenticatedLayout>} />
+          <Route path="/admin/escalations" element={<AuthenticatedLayout allowedRoles={['ADMIN']}><AdminEscalationsPage /></AuthenticatedLayout>} />
+          <Route path="/admin/contributions" element={<AuthenticatedLayout allowedRoles={['ADMIN']}><AdminContributionsPage /></AuthenticatedLayout>} />
+          <Route path="/admin/system" element={<AuthenticatedLayout allowedRoles={['ADMIN']}><AdminSystemPage /></AuthenticatedLayout>} />
+          <Route path="/admin/import" element={<AuthenticatedLayout allowedRoles={['ADMIN']}><AdminImportPage /></AuthenticatedLayout>} />
+          <Route path="/admin/audit-logs" element={<AuthenticatedLayout allowedRoles={['ADMIN']}><AdminAuditLogsPage /></AuthenticatedLayout>} />
+
 
           {/* Complaints & Community */}
           <Route path="/complaints" element={<AuthenticatedLayout><ComplaintsPage /></AuthenticatedLayout>} />
@@ -135,6 +153,8 @@ export const App: React.FC = () => {
 
           {/* System Pages */}
           <Route path="/profile" element={<AuthenticatedLayout><ProfilePage /></AuthenticatedLayout>} />
+          <Route path="/notifications" element={<AuthenticatedLayout><NotificationsPage /></AuthenticatedLayout>} />
+          <Route path="/study-buddy" element={<AuthenticatedLayout><StudyBuddyPage /></AuthenticatedLayout>} />
 
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />

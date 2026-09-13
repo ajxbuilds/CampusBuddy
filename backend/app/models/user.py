@@ -61,3 +61,17 @@ class ParentLink(Base):
 
     parent = relationship("User", foreign_keys="ParentLink.parent_id")
     student = relationship("User", foreign_keys="ParentLink.student_id")
+
+class ParentLinkCode(Base):
+    __tablename__ = "parent_link_codes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    student_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    code = Column(String, unique=True, index=True, nullable=False) # e.g. CB-P7K4-X9M2
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    expires_at = Column(DateTime, nullable=False)
+    used_at = Column(DateTime, nullable=True)
+    used_by_parent_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+
+    student = relationship("User", foreign_keys="ParentLinkCode.student_id")

@@ -6,7 +6,7 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, role?: UserRole) => Promise<void>;
   quickLogin: (role: UserRole) => Promise<void>;
   register: (data: any) => Promise<void>;
   logout: () => void;
@@ -49,10 +49,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initAuth();
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, role?: UserRole) => {
     setIsLoading(true);
     try {
-      const resp = await api.login(email, password);
+      const resp = await api.login(email, password, role);
       localStorage.setItem('cb_token', resp.access_token);
       setToken(resp.access_token);
       setUser(resp.user);
@@ -70,7 +70,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
     const c = creds[role];
     if (c) {
-      await login(c.email, c.pass);
+      await login(c.email, c.pass, role);
     }
   };
 

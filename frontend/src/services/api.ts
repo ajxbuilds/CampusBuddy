@@ -8,6 +8,7 @@ import { StudyBuddyProfile, StudyBuddyProfileCreate, StudyBuddyDiscover, StudyBu
   CommunityAnswer,
   Badge,
   UserBadge,
+  ParentLinkCodeResponse,
   PointTransaction,
   LeaderboardResponse,
   AppNotification,
@@ -18,6 +19,7 @@ import { StudyBuddyProfile, StudyBuddyProfileCreate, StudyBuddyDiscover, StudyBu
   ReportResponse,
   AIChatMessage,
   AIChatResponse,
+  UserRole,
 } from '../types';
 
 
@@ -62,10 +64,10 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 
 export const api = {
   // Auth
-  login: (email: string, password: string) =>
+  login: (email: string, password: string, role?: UserRole) =>
     request<AuthResponse>('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, role }),
     }),
 
   register: (data: any) =>
@@ -109,7 +111,7 @@ export const api = {
     roll_number?: string;
     semester?: number;
     program?: string;
-    linked_student_id?: number;
+    parent_link_code?: string;
   }) =>
     request<AuthResponse>('/auth/google/onboard', {
       method: 'POST',
@@ -119,6 +121,13 @@ export const api = {
   listStudents: () => request<User[]>('/auth/students'),
   listStaff: () => request<User[]>('/auth/staff'),
   getLinkedStudent: () => request<User | null>('/auth/parent/linked-student'),
+  getLinkedStudents: () => request<User[]>('/auth/parent/linked-students'),
+  getParentLinkCode: () => request<ParentLinkCodeResponse | null>('/auth/parent/link-code'),
+  generateParentLinkCode: () => request<ParentLinkCodeResponse>('/auth/parent/link-code/generate', { method: 'POST' }),
+  linkParent: (code: string) => request<{status: string, message: string}>('/auth/parent/link', {
+    method: 'POST',
+    body: JSON.stringify({ code })
+  }),
 
   // Complaints
   getCategories: () => request<ComplaintCategory[]>('/complaints/categories'),
@@ -250,6 +259,44 @@ export const api = {
 
   // Admin
   getAdminStats: () => request<AdminStats>('/admin/stats'),
+  // New Admin Endpoints
+  listAuditLogs: (limit: number = 50) => request<any[]>(`/admin/audit-logs?limit=${limit}`),
+  listParentLinks: () => request<any[]>('/admin/parent-links'),
+  createParentLink: (parentId: number, studentId: number) => request<any>('/admin/parent-links', {
+    method: 'POST',
+    body: JSON.stringify({ parent_id: parentId, student_id: studentId })
+  }),
+  deleteParentLink: (linkId: number) => request<{status: string}>(`/admin/parent-links/${linkId}`, {
+    method: 'DELETE'
+  }),
+  listAdminComplaints: (status?: string, priority?: string) => {
+    const sp = new URLSearchParams();
+    if (status) sp.append('status', status);
+    if (priority) sp.append('priority', priority);
+    const q = sp.toString() ? `?${sp.toString()}` : '';
+    return request<any[]>(`/admin/complaints${q}`);
+  },
+  importStudents: (csvFile: File) => {
+    const formData = new FormData();
+    formData.append('file', csvFile);
+    
+    // We must use fetch directly to avoid setting Content-Type to JSON
+    const token = localStorage.getItem('token');
+    return fetch('/api/admin/students/import', {
+      method: 'POST',
+      headers: {
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      },
+      body: formData
+    }).then(async res => {
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.detail || 'Import failed');
+      }
+      return res.json();
+    });
+  },
+
   listAdminUsers: (role?: string, search?: string) => {
     const sp = new URLSearchParams();
     if (role && role !== 'ALL') sp.append('role', role);
@@ -273,7 +320,6 @@ export const api = {
       method: 'PATCH',
     });
   },
-  listAuditLogs: () => request<AuditLog[]>('/admin/audit-logs'),
 
   // Analytics
   getCategoryDistribution: () => request<CategoryDistribution[]>('/analytics/by-category'),
@@ -291,4 +337,6 @@ export const api = {
     getConnections: () => request<StudyBuddyConnection[]>('/study-buddy/connections'),
   },
 };
+
+
 

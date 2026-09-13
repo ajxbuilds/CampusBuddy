@@ -26,7 +26,7 @@ export const StudentLoginPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      await login(email, password);
+      await login(email, password, 'STUDENT');
       navigate('/dashboard');
     } catch (err: any) {
       setError(err.message || 'Invalid credentials.');

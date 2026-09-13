@@ -518,3 +518,97 @@ async def google_onboard(
         user=UserResponse.model_validate(user_loaded)
     )
 
+from app.schemas.user import ParentLinkCodeResponse, ParentLinkRequest
+from app.models.user import ParentLinkCode, ParentLink
+
+@router.get("/parent/link-code", response_model=Optional[ParentLinkCodeResponse])
+async def get_parent_link_code(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    if current_user.role != UserRole.STUDENT:
+        raise HTTPException(status_code=403, detail="Only students can view their link code.")
+        
+    stmt = select(ParentLinkCode).where(
+        ParentLinkCode.student_id == current_user.id,
+        ParentLinkCode.is_active == True,
+        ParentLinkCode.expires_at >= datetime.now(timezone.utc).replace(tzinfo=None)
+    )
+    res = await db.execute(stmt)
+    code_obj = res.scalars().first()
+    
+    if not code_obj:
+        return None
+    return ParentLinkCodeResponse(code=code_obj.code, expires_at=code_obj.expires_at, is_active=bool(code_obj.is_active))
+
+@router.post("/parent/link-code/generate", response_model=ParentLinkCodeResponse)
+async def generate_parent_link_code(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    if current_user.role != UserRole.STUDENT:
+        raise HTTPException(status_code=403, detail="Only students can generate a link code.")
+    
+    stmt = select(ParentLinkCode).where(ParentLinkCode.student_id == current_user.id, ParentLinkCode.is_active == True)
+    res = await db.execute(stmt)
+    for code_obj in res.scalars().all():
+        code_obj.is_active = False
+    
+    import random
+    import string
+    chars = string.ascii_uppercase.replace("O", "").replace("I", "").replace("L", "").replace("S", "").replace("B", "")
+    nums = string.digits.replace("0", "").replace("1", "").replace("5", "").replace("8", "")
+    pool = chars + nums
+    code_str = "CB-" + "".join(random.choices(pool, k=4)) + "-" + "".join(random.choices(pool, k=4))
+    
+    new_code = ParentLinkCode(
+        student_id=current_user.id,
+        code=code_str,
+        is_active=True,
+        expires_at=datetime.now(timezone.utc) + timedelta(hours=48)
+    )
+    db.add(new_code)
+    await db.commit()
+    
+    return ParentLinkCodeResponse(code=new_code.code, expires_at=new_code.expires_at, is_active=True)
+
+@router.post("/parent/link")
+async def parent_link_student(
+    request: ParentLinkRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    if current_user.role != UserRole.PARENT:
+        raise HTTPException(status_code=403, detail="Only parents can link students.")
+    
+    code_str = request.code.strip().upper()
+    stmt = select(ParentLinkCode).where(ParentLinkCode.code == code_str, ParentLinkCode.is_active == True)
+    res = await db.execute(stmt)
+    code_obj = res.scalars().first()
+    
+    if not code_obj:
+        raise HTTPException(status_code=400, detail="That Parent Link Code is invalid or has expired.")
+    
+    if code_obj.expires_at < datetime.now(timezone.utc).replace(tzinfo=None):
+        code_obj.is_active = False
+        await db.commit()
+        raise HTTPException(status_code=400, detail="That Parent Link Code has expired.")
+        
+    existing = await db.scalar(select(ParentLink).where(ParentLink.parent_id == current_user.id, ParentLink.student_id == code_obj.student_id))
+    if existing:
+        raise HTTPException(status_code=400, detail="You are already linked to this student.")
+        
+    parent_link = ParentLink(
+        parent_id=current_user.id,
+        student_id=code_obj.student_id,
+        relation_type="Parent",
+        is_verified=True
+    )
+    db.add(parent_link)
+    
+    code_obj.is_active = False
+    code_obj.used_at = datetime.now(timezone.utc)
+    code_obj.used_by_parent_id = current_user.id
+    
+    await db.commit()
+    return {"status": "success", "message": "Successfully linked student account."}

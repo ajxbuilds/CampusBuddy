@@ -32,11 +32,12 @@ class UserCreate(UserBase):
     roll_number: Optional[str] = None
     semester: Optional[int] = 1
     program: Optional[str] = "B.Tech Computer Science"
-    linked_student_id: Optional[int] = None # For parents
+    parent_link_code: Optional[str] = None # For parents
 
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+    role: Optional[UserRole] = None
 
 class UserBasicResponse(UserBase):
     id: int
@@ -78,4 +79,13 @@ class GoogleOnboardRequest(BaseModel):
     roll_number: Optional[str] = None
     semester: Optional[int] = 1
     program: Optional[str] = "B.Tech Computer Science"
-    linked_student_id: Optional[int] = None
+    parent_link_code: Optional[str] = None
+
+class ParentLinkCodeResponse(BaseModel):
+    code: str
+    expires_at: datetime
+    is_active: bool
+
+class ParentLinkRequest(BaseModel):
+    code: str
+

@@ -16,7 +16,7 @@ export const RegisterPage: React.FC = () => {
   const [department, setDepartment] = useState('Computer Science & Engineering');
   const [rollNumber, setRollNumber] = useState('');
   const [semester, setSemester] = useState(1);
-  const [linkedStudentId, setLinkedStudentId] = useState<number | undefined>(undefined);
+  const [parentLinkCode, setParentLinkCode] = useState('');
   const [students, setStudents] = useState<User[]>([]);
 
   const [loading, setLoading] = useState(false);
@@ -41,7 +41,7 @@ export const RegisterPage: React.FC = () => {
         department: role === 'STUDENT' || role === 'TEACHER' ? department : undefined,
         roll_number: role === 'STUDENT' ? rollNumber || undefined : undefined,
         semester: role === 'STUDENT' ? Number(semester) : undefined,
-        linked_student_id: role === 'PARENT' ? Number(linkedStudentId) : undefined,
+        parent_link_code: role === 'PARENT' ? parentLinkCode : undefined,
       });
       navigate('/dashboard');
     } catch (err: any) {
@@ -177,20 +177,15 @@ export const RegisterPage: React.FC = () => {
           {role === 'PARENT' && (
             <div className="p-3 bg-amber-50/50 rounded-2xl border border-amber-100">
               <label className="block text-xs font-bold text-slate-700 mb-1">
-                Link to Student Ward
+                Parent Link Code
               </label>
-              <select
-                value={linkedStudentId}
-                onChange={(e) => setLinkedStudentId(Number(e.target.value))}
-                className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none"
-              >
-                <option value="">-- Select Student to Link --</option>
-                {students.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.full_name} ({s.student_profile?.roll_number || s.email})
-                  </option>
-                ))}
-              </select>
+              <input
+                type="text"
+                placeholder="CB-XXXX-XXXX"
+                value={parentLinkCode}
+                onChange={(e) => setParentLinkCode(e.target.value.toUpperCase())}
+                className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none uppercase font-mono"
+              />
               <p className="text-[11px] text-slate-500 mt-1">
                 Enables verified access to track your ward's complaints.
               </p>

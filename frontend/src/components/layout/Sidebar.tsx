@@ -1,9 +1,9 @@
 import React from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
-import { 
+import {
   LayoutDashboard, MessageSquare, Bot, Trophy, HelpCircle, User, Users,
-  LogOut, ChevronLeft, ChevronRight, GraduationCap, X
+  LogOut, ChevronLeft, ChevronRight, GraduationCap, X, Shield, FileText, AlertTriangle, Settings, Upload, Flag, Link as LinkIcon
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -96,21 +96,47 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, mobileOpe
       case 'ADMIN':
         return [
           {
-            title: 'Management',
+            title: 'Overview',
             items: [{ label: 'Dashboard', path: '/admin', icon: LayoutDashboard }]
           },
           {
-            title: 'Resources',
+            title: 'Management',
             items: [
-              { label: 'All Complaints', path: '/complaints', icon: HelpCircle }
+              { label: 'Users', path: '/admin/users', icon: Users },
+              { label: 'Parent Links', path: '/admin/parent-links', icon: LinkIcon }
             ]
           },
           {
-            title: 'Campus Life',
+            title: 'Community',
             items: [
-              { label: 'Community', path: '/community', icon: MessageSquare },
-              { label: 'Study Buddy', path: '/study-buddy', icon: Users },
-              { label: 'Leaderboard', path: '/leaderboard', icon: Trophy }
+              { label: 'Questions', path: '/admin/community', icon: MessageSquare },
+              { label: 'Reports', path: '/admin/reports', icon: Flag }
+            ]
+          },
+          {
+            title: 'Complaints',
+            items: [
+              { label: 'All Complaints', path: '/admin/complaints', icon: HelpCircle },
+              { label: 'Escalations', path: '/admin/escalations', icon: AlertTriangle }
+            ]
+          },
+          {
+            title: 'Engagement',
+            items: [
+              { label: 'Contributions', path: '/admin/contributions', icon: Trophy }
+            ]
+          },
+          {
+            title: 'System',
+            items: [
+              { label: 'Settings & Cats', path: '/admin/system', icon: Settings },
+              { label: 'Bulk Import', path: '/admin/import', icon: Upload }
+            ]
+          },
+          {
+            title: 'Security',
+            items: [
+              { label: 'Audit Logs', path: '/admin/audit-logs', icon: Shield }
             ]
           }
         ];
