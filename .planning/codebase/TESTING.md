@@ -1,23 +1,41 @@
 # Testing Practices
 
-This document outlines the testing frameworks, strategies, and coverage areas for the CampusBuddy project.
+This document outlines the testing frameworks, coverage areas, locations of tests, and testing strategies used in the CampusBuddy project.
 
-## Backend Testing
-- **Frameworks:** Instead of a dedicated test runner like `pytest` or `unittest`, the backend employs custom Python scripts (`test_api.py`, `test_complete_platform.py`, `test_wave3_live.py`).
-- **Strategy:** Lightweight integration and end-to-end (E2E) testing. The tests utilize `httpx.AsyncClient` along with `ASGITransport` to run requests against the FastAPI app instance asynchronously.
-- **Assertion Method:** Standard Python `assert` statements wrapped within `asyncio.run()`.
-- **Test Locations:** Placed directly in the `backend/` root directory.
-- **Coverage Areas:**
-  - Health checks.
-  - End-to-end user workflows (e.g., student and admin logins).
-  - Core API functionalities: CRUD operations for complaints, fetching categories, etc.
-  - AI integrations (e.g., AI chatbot procedure diagnosis).
-  - Gamification (leaderboard) and community features (Q&A posts).
+## 1. Test Frameworks
 
-## Frontend Testing
-- **Frameworks:** Currently, there are no frontend testing libraries (like Vitest, Jest, Playwright, or Cypress) configured in the `package.json`. No `.test.tsx` or `.spec.tsx` files are present in the frontend directory.
-- **Strategy:** Relies primarily on manual testing and robust static typing using TypeScript.
-- **Coverage Areas:** N/A (Automated tests are currently absent).
+### Backend
+- **Framework**: Custom standalone asynchronous Python scripts. 
+- **Tooling**: `httpx.AsyncClient` with `ASGITransport` is heavily used to interact directly with the FastAPI ASGI application.
+- **Runner**: There is no formal test runner (like `pytest` or `unittest`) configured. Tests are executed by directly running the python scripts (e.g., `python backend/test_api.py`).
+- **Assertions**: Standard Python `assert` statements combined with detailed `print()` statements to track test progress and log results.
 
-## Overall Strategy
-The project currently relies heavily on backend API tests to ensure functional correctness, while the frontend is dependent on developer manual validation. Future iterations could benefit from introducing unit tests (`pytest` for backend, `Vitest`/`React Testing Library` for frontend) and E2E tools like `Playwright` to validate the UI systematically.
+### Frontend
+- **Framework**: No formal automated testing framework (such as Jest, Vitest, Cypress, or Playwright) is currently configured or set up in the frontend `package.json`.
+- **Strategy**: Relies heavily on manual testing and the backend integration tests to ensure data flows correctly. 
+
+## 2. Test Coverage Areas
+
+Backend testing currently covers the major functional domains of the application:
+- **API Endpoints**: Health checks, Authentication (Student and Admin logins).
+- **Core Features**: Complaints (retrieval and categories), Community Q&A.
+- **AI Integration**: Validation of AI Chat logic (structured diagnosis output).
+- **Gamification**: Leaderboard endpoints.
+- **Admin**: Dashboard metrics (total, pending, in-progress complaints).
+- **Database & Data Seeding**: Scripts exist to verify the successful seeding and presence of Faculty, Subjects, Attendance, Fees, Notices, etc.
+
+## 3. Locations of Tests
+
+All testing files are currently located at the root of the `backend` directory:
+- `backend/test_api.py`: Tests standard REST endpoints, user/admin flows, AI services, and gamification logic via `httpx`.
+- `backend/test_complete_platform.py`: Tests direct database interactions using `AsyncSessionLocal` to verify the state of records in the database.
+- `backend/test_wave3_live.py`: Specific scenario or wave-based testing script.
+- `backend/verify_platform.py`: Another database state verification script.
+- **Database**: Testing appears to interact with specific databases like `test.db` alongside `campusbuddy.db`.
+
+## 4. Testing Strategies Used
+
+- **Integration Testing via ASGI**: Instead of spinning up a live web server on a port, the tests use `ASGITransport` to pass requests directly to the FastAPI app object. This allows for fast, robust integration testing of HTTP routes without network overhead.
+- **Direct Database Assertions**: State verification tests bypass the API completely to query the database using SQLAlchemy, ensuring that specific seeding scripts or complex data mutations are accurately reflected in the tables.
+- **Log-Driven Feedback**: Rather than standard test reports (like XML or HTML coverage), the tests emit console output via descriptive print statements indicating PASS/FAIL status for each step.
+- **No Mocking**: Tests seem to interact with real services and local databases rather than heavily utilizing mocks or stubs.

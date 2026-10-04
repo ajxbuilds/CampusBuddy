@@ -1,25 +1,48 @@
 # Codebase Conventions
 
-This document outlines the coding standards, conventions, and practices employed in the CampusBuddy project.
+This document outlines the coding standards, naming conventions, linting rules, and styling guidelines adopted in the CampusBuddy codebase.
 
-## Frontend (React + TypeScript)
-- **Framework & Build Tool:** React 19, built and served using Vite.
-- **Language:** TypeScript for static typing and improved developer experience.
-- **Styling:** Tailwind CSS is used extensively for styling, utility classes, and responsive design.
-- **Linting & Formatting:** No explicit ESLint or Prettier configurations (`.eslintrc`, `.prettierrc`) are currently present. Code quality relies on standard TypeScript compiler checks and developer discipline.
-- **Component Structure:** Functional components with React Hooks. Organized into logical directories (`components`, `pages`, `services`, `types`, etc.).
+## 1. Coding Styles & Paradigms
 
-## Backend (FastAPI + Python)
-- **Framework:** FastAPI is used for building high-performance, asynchronous REST APIs.
-- **Language:** Python 3 (async/await paradigm).
-- **Type Annotations:** Strong usage of Python type hints, a core requirement for FastAPI route definitions, validation (via Pydantic), and serialization.
-- **ORM & Database:** SQLAlchemy 2.0 (asynchronous) with aiosqlite for database interactions.
-- **Linting & Formatting:** No explicit tools like `flake8`, `black`, or `ruff` are defined in the requirements. Code follows standard PEP 8 naming conventions.
-- **Authentication:** JWT-based authentication using `python-jose` and `passlib`.
+### Frontend
+- **Framework**: React 19 with Vite.
+- **Language**: TypeScript is used exclusively (`.ts`, `.tsx`).
+- **Paradigm**: Functional components utilizing React Hooks. 
+- **Styling**: Utility-first CSS using Tailwind CSS (`className` attributes extensively). Components are styled directly without separate CSS files.
 
-## General Naming Conventions
-- **Files/Directories:**
-  - Frontend components and pages: PascalCase (e.g., `ComplaintCard.tsx`, `CommunityPage.tsx`).
-  - Backend modules: snake_case (e.g., `main.py`, `test_api.py`).
-- **Variables & Functions:** camelCase in TypeScript, snake_case in Python.
-- **Classes/Interfaces:** PascalCase across both TypeScript and Python.
+### Backend
+- **Framework**: FastAPI (Python).
+- **Language**: Python 3 (async features heavily utilized).
+- **Paradigm**: Asynchronous API endpoints (`async def`). 
+- **Database Access**: SQLAlchemy with async sessions (`AsyncSessionLocal`) and async queries (`select()`).
+- **Structure**: Separation of concerns is maintained with routers (`api`), business logic (`services`), database models (`models`), and Pydantic validation models (`schemas`).
+
+## 2. Naming Conventions
+
+### Frontend
+- **Components**: PascalCase (e.g., `DashboardComponent.tsx`).
+- **Variables & Functions**: camelCase (e.g., `fetchData`, `userData`).
+- **Types/Interfaces**: PascalCase.
+
+### Backend
+- **Files/Modules**: snake_case (e.g., `ai_service.py`, `test_api.py`).
+- **Classes/Models**: PascalCase (e.g., `FacultyMember`, `Subject`).
+- **Functions & Variables**: snake_case (e.g., `generate_guidance`, `db_session`).
+- **Constants**: UPPER_SNAKE_CASE.
+
+## 3. Linting Rules & Formatting
+
+Currently, the project takes a relaxed approach to strict linting and formatting:
+- **Frontend**: 
+  - Relies on TypeScript compiler checks (`tsc`).
+  - No explicit `.eslintrc` or `.prettierrc` configuration is defined in the repository, meaning developers should rely on standard IDE defaults or standard TypeScript language server diagnostics.
+- **Backend**:
+  - No strict formatting tools like `Black`, `Flake8`, or `Ruff` are enforced via configuration files at the root level.
+  - Follows general PEP-8 guidelines implicitly.
+
+## 4. Specific Tooling Conventions
+
+- **Icons**: `lucide-react` is the standard library used for icons.
+- **Charts**: `recharts` is used for rendering charts/graphs.
+- **Animations**: `framer-motion` / `gsap` (Wait, GSAP and Anime.js are in dependencies, animations should leverage these libraries).
+- **Class Merging**: `tailwind-merge` and `clsx` are used to cleanly merge conditionally applied Tailwind classes.
