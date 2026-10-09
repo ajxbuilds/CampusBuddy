@@ -1,2 +1,3 @@
-﻿[project.scripts]
-app = "app.main:app"
+﻿
+[tool.vercel]
+entrypoint = "app/main.py"
