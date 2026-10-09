@@ -28,7 +28,12 @@ from app.api.study_buddy import router as study_buddy_router
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup: Ensure upload directory exists
-    os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
+    upload_root = (
+    "/tmp/uploads"
+    if os.getenv("VERCEL")
+    else settings.UPLOAD_DIR
+)
+os.makedirs(upload_root, exist_ok=True)
     # Automatically create tables in database
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -93,8 +98,13 @@ app.add_middleware(
 )
 
 # Uploads directory is ensured to exist, but NOT mounted statically for security.
-os.makedirs("uploads/complaints", exist_ok=True)
-os.makedirs("uploads/community", exist_ok=True)
+upload_root = (
+    "/tmp/uploads"
+    if os.getenv("VERCEL")
+    else "uploads"
+)
+os.makedirs(os.path.join(upload_root, "complaints"), exist_ok=True)
+os.makedirs(os.path.join(upload_root, "community"), exist_ok=True)
 
 # Include API Routers
 app.include_router(auth_router, prefix=settings.API_V1_STR)

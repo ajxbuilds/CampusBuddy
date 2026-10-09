@@ -483,7 +483,11 @@ import os
 import uuid
 
 
-UPLOAD_DIR = "uploads/complaints"
+UPLOAD_DIR = (
+    "/tmp/uploads/complaints"
+    if os.getenv("VERCEL")
+    else "uploads/complaints"
+)
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
