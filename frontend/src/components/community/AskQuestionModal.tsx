@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, MessageSquare, AlertCircle, Sparkles, Send } from 'lucide-react';
+import { X, MessageSquare, AlertCircle, Sparkles, Send, Paperclip, Link as LinkIcon, Plus, Trash2 } from 'lucide-react';
 import { api } from '../../services/api';
 
 interface AskQuestionModalProps {
@@ -35,6 +35,11 @@ export const AskQuestionModal: React.FC<AskQuestionModalProps> = ({
   const [category, setCategory] = useState(initialCategory);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [attachment, setAttachment] = useState<File | null>(null);
+  const [resources, setResources] = useState<{ url: string; title: string }[]>([]);
+  const [showUrlInput, setShowUrlInput] = useState(false);
+  const [tempUrl, setTempUrl] = useState('');
+  const [tempTitle, setTempTitle] = useState('');
 
   if (!isOpen) return null;
 
@@ -53,7 +58,8 @@ export const AskQuestionModal: React.FC<AskQuestionModalProps> = ({
         content: content.trim(),
         category,
       });
-      onCreated(created);
+      if (attachment) { await api.uploadCommunityAttachment(created.id, attachment); }
+        onCreated(created);
       onClose();
     } catch (err: any) {
       setError(err.message || 'Failed to post question.');
@@ -134,6 +140,93 @@ export const AskQuestionModal: React.FC<AskQuestionModalProps> = ({
               onChange={(e) => setContent(e.target.value)}
               className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition"
             />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+              Resources (Optional)
+            </label>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <label className="cursor-pointer flex items-center gap-2 px-4 py-2 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 rounded-xl text-sm font-semibold transition">
+                  <Paperclip className="w-4 h-4" />
+                  {attachment ? 'Change File' : 'Add File'}
+                  <input
+                    type="file"
+                    className="hidden"
+                    onChange={(e) => setAttachment(e.target.files?.[0] || null)}
+                    accept=".pdf,.jpg,.jpeg,.png,.webp,.gif,.mp4,.txt"
+                  />
+                </label>
+
+                <button
+                  type="button"
+                  onClick={() => setShowUrlInput(!showUrlInput)}
+                  className="flex items-center gap-2 px-4 py-2 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 rounded-xl text-sm font-semibold transition"
+                >
+                  <LinkIcon className="w-4 h-4" />
+                  Add URL
+                </button>
+              </div>
+
+              {attachment && (
+                <div className="flex items-center gap-2 text-sm font-medium text-slate-700 bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl">
+                  <Paperclip className="w-4 h-4 text-slate-400" />
+                  <span className="truncate max-w-[200px]">{attachment.name}</span>
+                  <button type="button" onClick={() => setAttachment(null)} className="ml-auto text-slate-400 hover:text-red-500">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
+              {resources.map((res, idx) => (
+                <div key={idx} className="flex items-center gap-2 text-sm font-medium text-slate-700 bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl">
+                  <LinkIcon className="w-4 h-4 text-slate-400" />
+                  <div className="flex flex-col overflow-hidden">
+                    {res.title && <span className="truncate max-w-[250px] font-bold text-xs">{res.title}</span>}
+                    <span className="truncate max-w-[250px] text-xs text-slate-500">{res.url}</span>
+                  </div>
+                  <button type="button" onClick={() => setResources(r => r.filter((_, i) => i !== idx))} className="ml-auto text-slate-400 hover:text-red-500">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+
+              {showUrlInput && (
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-3">
+                  <input
+                    type="url"
+                    placeholder="https://example.com"
+                    value={tempUrl}
+                    onChange={(e) => setTempUrl(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Link title (optional)"
+                    value={tempTitle}
+                    onChange={(e) => setTempTitle(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <div className="flex justify-end gap-2">
+                    <button type="button" onClick={() => { setShowUrlInput(false); setTempUrl(''); setTempTitle(''); }} className="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-200 rounded-lg">Cancel</button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!tempUrl.trim()) return;
+                        setResources([...resources, { url: tempUrl.trim(), title: tempTitle.trim() }]);
+                        setTempUrl('');
+                        setTempTitle('');
+                        setShowUrlInput(false);
+                      }}
+                      className="px-3 py-1.5 text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg"
+                    >
+                      Add Link
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="p-3 bg-indigo-50/60 rounded-xl border border-indigo-100 flex items-start gap-2.5">

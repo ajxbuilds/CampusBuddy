@@ -1,4 +1,4 @@
-import { StudyBuddyProfile, StudyBuddyProfileCreate, StudyBuddyDiscover, StudyBuddyRequest, StudyBuddyConnection, 
+import { StudyBuddyProfile, StudyBuddyProfileCreate, StudyBuddyDiscover, StudyBuddyRequest, StudyBuddyConnection,
   AuthResponse,
   User,
   Complaint,
@@ -6,9 +6,11 @@ import { StudyBuddyProfile, StudyBuddyProfileCreate, StudyBuddyDiscover, StudyBu
   ComplaintEscalation,
   CommunityPost,
   CommunityAnswer,
+  CommunityReply,
   Badge,
   UserBadge,
   PointTransaction,
+  GamificationSummary,
   LeaderboardResponse,
   AppNotification,
   AdminStats,
@@ -48,6 +50,7 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   });
 
   if (!response.ok) {
+    if (response.status === 503) window.dispatchEvent(new Event('maintenance-mode-active'));
     let errorDetail = 'Request failed';
     try {
       const err = await response.json();
@@ -58,10 +61,57 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     throw new Error(errorDetail);
   }
 
+  if (response.status === 204) {
+    return {} as T;
+  }
+  if (response.status === 204) {
+    return {} as T;
+  }
   return response.json();
 }
 
 export const api = {
+
+  // Admin Community
+  getAdminCommunityStats: async () => {
+    return request<any>('/admin/community/stats');
+  },
+  getAdminCommunityPosts: async (params?: any) => {
+    const sp = new URLSearchParams();
+    if (params?.page) sp.append('page', params.page);
+    if (params?.limit) sp.append('limit', params.limit);
+    if (params?.search) sp.append('search', params.search);
+    if (params?.category) sp.append('category', params.category);
+    if (params?.status) sp.append('status', params.status);
+    const q = sp.toString() ? `?${sp.toString()}` : '';
+    return request<any>(`/admin/community/posts${q}`);
+  },
+
+  // Admin Gamification
+  getAdminGamificationStats: async (params?: any) => {
+    const q = params && params.start_date ? `?start_date=${params.start_date}` : '';
+    return request<any>(`/admin/gamification/stats${q}`);
+  },
+  getAdminGamificationChart: async (params?: any) => {
+    const q = params && params.start_date ? `?start_date=${params.start_date}` : '';
+    return request<any>(`/admin/gamification/chart${q}`);
+  },
+  getAdminGamificationBreakdown: async (params?: any) => {
+    const q = params && params.start_date ? `?start_date=${params.start_date}` : '';
+    return request<any>(`/admin/gamification/breakdown${q}`);
+  },
+  getAdminGamificationTopContributors: async (params?: any) => {
+    return request<any>(`/admin/gamification/top-contributors`);
+  },
+  getAdminGamificationTransactions: async (params?: any) => {
+    const sp = new URLSearchParams();
+    if (params?.page) sp.append('page', params.page);
+    if (params?.limit) sp.append('limit', params.limit);
+    if (params?.event_type) sp.append('event_type', params.event_type);
+    const q = sp.toString() ? `?${sp.toString()}` : '';
+    return request<any>(`/admin/gamification/transactions${q}`);
+  },
+
   // Auth
   login: (email: string, password: string, role?: UserRole) =>
     request<AuthResponse>('/auth/login', {
@@ -76,6 +126,7 @@ export const api = {
     }),
 
   getMe: () => request<User>('/auth/me'),
+  updateMyProfile: (data: any) => request<User>('/auth/me/profile', { method: 'PUT', body: JSON.stringify(data) }),
 
   // Google OAuth
   getGoogleAuthStatus: () =>
@@ -86,21 +137,7 @@ export const api = {
       `/auth/google/login?redirect=${redirect}`
     ),
 
-  simulateGoogleLogin: (email?: string, name?: string, picture?: string) => {
-    const params = new URLSearchParams();
-    if (email) params.append('email', email);
-    if (name) params.append('name', name);
-    if (picture) params.append('picture', picture);
-    return request<{
-      status: string;
-      action: 'login' | 'onboard';
-      redirect_url: string;
-      token?: string;
-      onboarding_token?: string;
-    }>(`/auth/google/dev-simulate?${params.toString()}`, {
-      method: 'POST',
-    });
-  },
+
 
   onboardGoogleUser: (data: {
     onboarding_token: string;
@@ -110,6 +147,8 @@ export const api = {
     roll_number?: string;
     semester?: number;
     program?: string;
+    year?: string;
+    division?: string;
   }) =>
     request<AuthResponse>('/auth/google/onboard', {
       method: 'POST',
@@ -215,6 +254,14 @@ export const api = {
     }),
 
   // Community
+  uploadCommunityAttachment: (postId: number, file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return request<{ id: number; filename: string }>(`/community/posts/${postId}/attachments`, {
+      method: 'POST',
+      body: formData,
+    });
+  },
   listPosts: (params?: { category?: string; sort_by?: string; search?: string }) => {
     const searchParams = new URLSearchParams();
     if (params?.category && params.category !== 'All') searchParams.append('category', params.category);
@@ -226,7 +273,7 @@ export const api = {
 
   getPost: (id: number) => request<CommunityPost>(`/community/posts/${id}`),
 
-  createPost: (data: { title: string; content: string; category: string }) =>
+  createPost: (data: { title: string; content: string; category: string; resources?: { url: string; title?: string }[] }) =>
     request<CommunityPost>('/community/posts', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -238,14 +285,32 @@ export const api = {
       body: JSON.stringify({ content }),
     }),
 
-  toggleVote: (targetType: 'POST' | 'ANSWER', targetId: number) =>
-    request<{ status: string; action: string; new_upvotes: number }>('/community/vote', {
+  toggleVote: (targetType: 'POST' | 'ANSWER' | 'REPLY', targetId: number, voteType: 'UPVOTE' | 'DOWNVOTE' = 'UPVOTE') =>
+    request<{ status: string; action: string; upvotes: number; downvotes: number }>('/community/vote', {
       method: 'POST',
-      body: JSON.stringify({ target_type: targetType, target_id: targetId }),
+      body: JSON.stringify({ target_type: targetType, target_id: targetId, vote_type: voteType }),
+    }),
+
+  deletePost: (id: number) =>
+    request<{ status: string }>(`/community/posts/${id}`, {
+      method: 'DELETE',
+    }),
+  deleteAnswer: (id: number) =>
+    request<{ status: string }>(`/community/answers/${id}`, {
+      method: 'DELETE',
+    }),
+  deleteReply: (id: number) =>
+    request<{ status: string }>(`/community/replies/${id}`, {
+      method: 'DELETE',
+    }),
+  createReply: (answerId: number, content: string, parentReplyId?: number) =>
+    request<CommunityReply>(`/community/answers/${answerId}/replies`, {
+      method: 'POST',
+      body: JSON.stringify({ content, parent_reply_id: parentReplyId }),
     }),
 
   acceptAnswer: (answerId: number) =>
-    request<{ status: string; message: string }>(`/community/answers/${answerId}/accept`, {
+    request<{ status: string; message: string; points_awarded?: number }>(`/community/answers/${answerId}/accept`, {
       method: 'PATCH',
     }),
 
@@ -259,6 +324,7 @@ export const api = {
   listBadges: () => request<Badge[]>('/gamification/badges'),
   getMyBadges: () => request<UserBadge[]>('/gamification/my-badges'),
   getMyTransactions: () => request<PointTransaction[]>('/gamification/my-transactions'),
+  getGamificationSummary: () => request<GamificationSummary>('/gamification/me'),
   getLeaderboard: (period: 'weekly' | 'monthly' | 'all-time' = 'all-time') =>
     request<LeaderboardResponse>(`/gamification/leaderboard?period=${period}`),
 
@@ -281,30 +347,38 @@ export const api = {
   markAllNotificationsRead: () =>
     request<{ status: string; updated: number }>('/notifications/mark-all-read', { method: 'POST' }),
 
+
+
+  // User Settings API
+  getUserSettings: () => request<any>('/auth/me/settings'),
+  updateUserSettings: (data: any) => request<any>('/auth/me/settings', {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  }),
+  // Settings API
+  getSettings: () => request<any[]>('/admin/settings'),
+  updateSettings: (updates: {key: string, value: string}[]) => request<any[]>('/admin/settings', {
+    method: 'PATCH',
+    body: JSON.stringify(updates)
+  }),
+
+
+  // Health API
+  getSystemHealth: () => request<any>('/admin/system-health'),
+
   // Admin
+
+
   getAdminStats: () => request<AdminStats>('/admin/stats'),
   // New Admin Endpoints
-  listAuditLogs: (limit: number = 50) => request<any[]>(`/admin/audit-logs?limit=${limit}`),
-
-  importStudents: (csvFile: File) => {
-    const formData = new FormData();
-    formData.append('file', csvFile);
-    
-    // We must use fetch directly to avoid setting Content-Type to JSON
-    const token = sessionStorage.getItem('cb_token');
-    return fetch('/api/admin/students/import', {
-      method: 'POST',
-      headers: {
-        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-      },
-      body: formData
-    }).then(async res => {
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.detail || 'Import failed');
-      }
-      return res.json();
-    });
+    listAuditLogs: (params: { limit?: number; skip?: number; start_date?: string; end_date?: string; action?: string } = {}) => {
+    const sp = new URLSearchParams();
+    if (params.limit !== undefined) sp.append('limit', params.limit.toString());
+    if (params.skip !== undefined) sp.append('skip', params.skip.toString());
+    if (params.start_date) sp.append('start_date', params.start_date);
+    if (params.end_date) sp.append('end_date', params.end_date);
+    if (params.action) sp.append('action', params.action);
+    return request<{items: any[], total: number, skip: number, limit: number}>(`/admin/audit-logs?${sp.toString()}`);
   },
 
   listAdminUsers: (role?: string, search?: string) => {
@@ -347,6 +421,3 @@ export const api = {
     getConnections: () => request<StudyBuddyConnection[]>('/study-buddy/connections'),
   },
 };
-
-
-

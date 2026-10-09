@@ -13,7 +13,7 @@ export const Navbar: React.FC = () => {
   const headerRef = useRef<HTMLElement>(null);
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    
+
     animate(headerRef.current, {
       translateY: [-4, 0],
       opacity: [0, 1],
@@ -36,13 +36,13 @@ export const Navbar: React.FC = () => {
     <header ref={headerRef} className="sticky top-0 z-40 w-full bg-white border-b border-slate-200 shadow-[0_4px_20px_-15px_rgba(0,0,0,0.1)] transition-all">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
-          
+
           {/* Brand Identity - Left */}
           <div className="nav-anim-item flex items-center gap-4">
             <Link to="/" className="flex items-center gap-4 group">
-              <img 
-                src="/kkwagh_logo.png" 
-                alt="K.K. Wagh Institute" 
+              <img
+                src="/kkwagh_logo.png"
+                alt="K.K. Wagh Institute"
                 className="h-10 md:h-12 w-auto object-contain transition-opacity hover:opacity-90"
               />
               <div className="w-[1px] h-8 bg-slate-300 hidden sm:block"></div>
@@ -72,7 +72,7 @@ export const Navbar: React.FC = () => {
           <div className="hidden lg:flex items-center gap-4">
             {user ? (
               <>
-                <button onClick={() => { logout(); navigate('/login'); }} className="nav-anim-item text-sm font-bold text-slate-600 hover:text-rose-600 transition-colors">
+                <button onClick={() => { logout(); navigate('/'); }} className="nav-anim-item text-sm font-bold text-slate-600 hover:text-rose-600 transition-colors">
                   Sign Out
                 </button>
                 <Link to="/dashboard" className="nav-anim-item px-5 py-2.5 text-sm font-bold text-white bg-blue-700 hover:bg-blue-800 rounded-lg shadow-sm hover:shadow transition-all active:scale-[0.98]">
@@ -81,9 +81,8 @@ export const Navbar: React.FC = () => {
               </>
             ) : (
               <>
-                <Link to="/login" className="nav-anim-item text-sm font-bold text-slate-600 hover:text-slate-900 transition-colors">
-                  Sign In
-                </Link>
+                <Link to="/login/student" className="nav-anim-item text-sm font-bold text-slate-600 hover:text-slate-900 transition-colors">Student Login</Link>
+                <Link to="/login/teacher" className="nav-anim-item text-sm font-bold text-slate-600 hover:text-slate-900 transition-colors">Faculty Login</Link>
                 <Link to="/register" className="nav-anim-item px-5 py-2.5 text-sm font-bold text-white bg-blue-700 hover:bg-blue-800 rounded-lg shadow-sm hover:shadow transition-all active:scale-[0.98]">
                   Join CampusBuddy
                 </Link>
@@ -125,15 +124,14 @@ export const Navbar: React.FC = () => {
                   <Link to="/dashboard" className="block w-full text-center px-4 py-2 text-base font-bold text-white bg-blue-700 rounded-lg shadow-sm">
                     Go to Dashboard
                   </Link>
-                  <button onClick={() => { logout(); navigate('/login'); }} className="block w-full text-center px-4 py-2 text-base font-bold text-slate-700 bg-slate-50 rounded-lg">
+                  <button onClick={() => { logout(); navigate('/'); }} className="block w-full text-center px-4 py-2 text-base font-bold text-slate-700 bg-slate-50 rounded-lg">
                     Sign Out
                   </button>
                 </>
               ) : (
                 <>
-                  <Link to="/login" className="block w-full text-center px-4 py-2 text-base font-bold text-slate-700 bg-slate-50 rounded-lg">
-                    Log In
-                  </Link>
+                  <Link to="/login/student" className="block w-full text-center px-4 py-2 text-base font-bold text-slate-700 bg-slate-50 rounded-lg">Student Login</Link>
+                  <Link to="/login/teacher" className="block w-full text-center px-4 py-2 text-base font-bold text-slate-700 bg-slate-50 rounded-lg mt-2">Faculty Login</Link>
                   <Link to="/register" className="block w-full text-center px-4 py-2 text-base font-bold text-white bg-blue-700 rounded-lg shadow-sm">
                     Join CampusBuddy
                   </Link>

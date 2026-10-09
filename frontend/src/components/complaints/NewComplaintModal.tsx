@@ -47,7 +47,7 @@ export const NewComplaintModal: React.FC<NewComplaintModalProps> = ({
         category_id: Number(categoryId),
         priority,
       });
-      
+
       // Handle File Upload if selected
       if (file) {
         try {
@@ -180,7 +180,7 @@ export const NewComplaintModal: React.FC<NewComplaintModalProps> = ({
           </div>
 
           <div className="p-3 bg-blue-50/50 rounded-xl border border-blue-100 text-[11px] text-blue-800">
-            A unique complaint tracking code (e.g. <span className="font-mono font-bold">CB-2026-XXXXXX</span>) will be generated. You and your linked parent can track the live status timeline.
+            A unique complaint tracking code (e.g. <span className="font-mono font-bold">CB-2026-XXXXXX</span>) will be generated. You can track the live status timeline.
           </div>
 
           <div className="flex items-center justify-end gap-3 pt-2">

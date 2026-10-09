@@ -12,6 +12,9 @@ from app.models.complaint import (
 from app.models.community import (
     CommunityPost,
     CommunityAnswer,
+    CommunityReply,
+    CommunityAttachment,
+    CommunityResource,
     Vote,
     VoteTargetType,
     Report,
@@ -41,6 +44,9 @@ __all__ = [
     "EscalationStatus",
     "CommunityPost",
     "CommunityAnswer",
+    "CommunityReply",
+    "CommunityAttachment",
+    "CommunityResource",
     "Vote",
     "VoteTargetType",
     "Report",
@@ -57,3 +63,8 @@ __all__ = [
     "ConnectionStatus",
 ]
 
+
+from .setting import AppSetting
+
+from app.models.user_settings import UserSettings
+__all__.append('UserSettings')

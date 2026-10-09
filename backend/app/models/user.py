@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 import enum
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Enum, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Enum, ForeignKey, Text
 from sqlalchemy.orm import relationship
 from app.core.database import Base
 
@@ -43,7 +43,15 @@ class StudentProfile(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False)
     roll_number = Column(String, unique=True, index=True, nullable=False)
     semester = Column(Integer, default=1)
+    year = Column(String, nullable=True)
+    division = Column(String, nullable=True)
     program = Column(String, default="B.Tech Computer Science")
     total_points = Column(Integer, default=0, index=True)
+
+    # New Academic/Peer-Learning Fields
+    skills = Column(String, nullable=True)
+    interests = Column(String, nullable=True)
+    help_areas = Column(String, nullable=True)
+    goals = Column(Text, nullable=True)
 
     user = relationship("User", back_populates="student_profile")

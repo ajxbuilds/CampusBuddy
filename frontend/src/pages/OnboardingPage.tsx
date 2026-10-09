@@ -246,7 +246,7 @@ export const OnboardingPage: React.FC = () => {
                     required
                     value={rollNumber}
                     onChange={(e) => setRollNumber(e.target.value)}
-                    placeholder="e.g. CB-2026-0042"
+                    placeholder="e.g. S1234567890"
                     className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   />
                 </div>
@@ -359,4 +359,3 @@ export const OnboardingPage: React.FC = () => {
     </div>
   );
 };
-

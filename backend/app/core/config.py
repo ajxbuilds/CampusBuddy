@@ -5,13 +5,14 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     PROJECT_NAME: str = "CampusBuddy"
     API_V1_STR: str = "/api"
-    SECRET_KEY: str = os.getenv("SECRET_KEY", "campusbuddy-super-secret-production-key-2026-secure")
+    ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "dev-only-fallback-secret-key")
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
 
     # Database: Async SQLite fallback by default for instant evaluation, or Postgres if DATABASE_URL is set
     DATABASE_URL: str = os.getenv(
-        "DATABASE_URL", 
+        "DATABASE_URL",
         "sqlite+aiosqlite:///./campusbuddy.db"
     )
 
@@ -32,6 +33,7 @@ class Settings(BaseSettings):
     # AI Configuration
     AI_PROVIDER: str = os.getenv("AI_PROVIDER", "auto") # auto, gemini, openai, mock
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
 
     # Frontend URL
@@ -41,7 +43,7 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str = os.getenv("GOOGLE_CLIENT_ID", "")
     GOOGLE_CLIENT_SECRET: str = os.getenv("GOOGLE_CLIENT_SECRET", "")
     GOOGLE_REDIRECT_URI: str = os.getenv(
-        "GOOGLE_REDIRECT_URI", 
+        "GOOGLE_REDIRECT_URI",
         "http://localhost:8000/api/auth/google/callback"
     )
 
@@ -55,6 +57,16 @@ class Settings(BaseSettings):
     SMTP_FROM_EMAIL: str = ""
     SMTP_FROM_NAME: str = ""
     SMTP_USE_TLS: str = "true"
+
+
+    @property
+    def is_production(self) -> bool:
+        return self.ENVIRONMENT.lower() == "production"
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        if self.is_production and (not self.SECRET_KEY or self.SECRET_KEY == "dev-only-fallback-secret-key"):
+            raise ValueError("SECRET_KEY must be explicitly configured in production environment!")
 
     class Config:
         case_sensitive = True

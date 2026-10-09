@@ -19,7 +19,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
 
       {/* Left Panel - Branding */}
       <div className="w-full md:w-[45%] lg:w-[45%] bg-[#0A192F] p-8 md:p-10 lg:p-16 flex flex-col relative overflow-hidden text-white min-h-[300px] md:min-h-screen justify-center">
-        
+
         {/* Abstract Background Shapes */}
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none opacity-20">
           <div className="absolute -top-32 -left-32 w-[500px] h-[500px] rounded-full bg-blue-600 blur-[120px]" />
@@ -42,9 +42,9 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
             Help.<br />
             <span className="text-blue-400">Solve.</span>
           </h2>
-          
+
           <p className="text-blue-100/80 text-sm md:text-base mb-8 md:mb-12 max-w-md leading-relaxed">
-            CampusBuddy brings students, teachers and parents together to solve problems, share knowledge and build a stronger campus community.
+            CampusBuddy brings students and teachers together to solve problems, share knowledge and build a stronger campus community.
           </p>
 
           <div className="space-y-5 max-w-md hidden md:block">
@@ -88,7 +88,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
               </div>
             </div>
           </div>
-          
+
           {/* Abstract network visual */}
           <div className="mt-auto pt-12 hidden lg:block opacity-60">
              <div className="flex items-center gap-4 text-xs font-medium text-blue-200/50">

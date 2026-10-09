@@ -4,9 +4,27 @@ from pydantic import BaseModel, EmailStr
 from app.models.user import UserRole
 
 class StudentProfileBase(BaseModel):
-    roll_number: str
+    roll_number: Optional[str] = None
     semester: int = 1
     program: str = "B.Tech Computer Science"
+    year: Optional[str] = None
+    division: Optional[str] = None
+    skills: Optional[str] = None
+    interests: Optional[str] = None
+    help_areas: Optional[str] = None
+    goals: Optional[str] = None
+
+class StudentProfileUpdate(BaseModel):
+    department: Optional[str] = None
+    semester: Optional[int] = None
+    roll_number: Optional[str] = None
+    year: Optional[str] = None
+    division: Optional[str] = None
+    program: Optional[str] = None
+    skills: Optional[str] = None
+    interests: Optional[str] = None
+    help_areas: Optional[str] = None
+    goals: Optional[str] = None
 
 class StudentProfileCreate(StudentProfileBase):
     pass
@@ -32,6 +50,8 @@ class UserCreate(UserBase):
     roll_number: Optional[str] = None
     semester: Optional[int] = 1
     program: Optional[str] = "B.Tech Computer Science"
+    year: Optional[str] = None
+    division: Optional[str] = None
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -78,4 +98,5 @@ class GoogleOnboardRequest(BaseModel):
     roll_number: Optional[str] = None
     semester: Optional[int] = 1
     program: Optional[str] = "B.Tech Computer Science"
-
+    year: Optional[str] = None
+    division: Optional[str] = None

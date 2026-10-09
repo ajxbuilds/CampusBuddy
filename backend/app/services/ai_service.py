@@ -215,9 +215,9 @@ async def fetch_faculty_info(db: AsyncSession, query_text: str) -> List[dict]:
 
     matches = []
     for f in faculties:
-        if (f.name.lower() in query_text.lower() or 
-            f.department.lower() in query_text.lower() or 
-            f.email.lower() in query_text.lower() or 
+        if (f.name.lower() in query_text.lower() or
+            f.department.lower() in query_text.lower() or
+            f.email.lower() in query_text.lower() or
             any(w in f.name.lower() for w in query_text.lower().split() if len(w) > 3)):
             matches.append({
                 "name": f.name,
@@ -248,6 +248,9 @@ async def fetch_notices_data(db: AsyncSession) -> List[dict]:
     } for n in notices]
 
 
+import asyncio
+import json
+
 async def generate_guidance(
     messages: List[AIChatMessage],
     context_category: Optional[str] = None,
@@ -262,160 +265,172 @@ async def generate_guidance(
             last_user_message = msg.content
             break
 
-    query_lower = last_user_message.lower()
     student_id = await get_student_target_id(current_user, db) if db and current_user else None
 
-    # Check intent for live database queries
-    is_attendance_query = bool(re.search(r"attendance|present|absent|bunk|eligib|shortage|classes.*attended", query_lower)) or current_page == "attendance"
-    is_schedule_query = bool(re.search(r"schedule|timetable|next class|today.*class|timing|period|lecture", query_lower)) or current_page == "timetable"
-    is_fees_query = bool(re.search(r"fee|receipt|dues|pending.*pay|tuition|hostel fee|pay.*online", query_lower)) or current_page == "fees"
-    is_exam_query = bool(re.search(r"exam|midterm|practical|date sheet|hall ticket|room|exam hall", query_lower)) or current_page == "exams"
-    is_complaint_query = bool(re.search(r"my complaint|ticket|grievance status|escalat", query_lower))
-    is_faculty_query = bool(re.search(r"faculty|professor|teacher|cabin|office hour|hod|dr\.|prof", query_lower))
-    is_notice_query = bool(re.search(r"notice|announcement|circular|update|what.*new", query_lower))
+    live_context_str = "Live data is currently unavailable."
 
-    live_context_str = ""
-
-    # Live data extraction if db is available
+    # Eagerly fetch live data to inject into NLU context if db is available
     if db and student_id:
-        if is_attendance_query and ("what" in query_lower or "how" in query_lower or "my" in query_lower or "check" in query_lower or "attendance" in query_lower):
-            att_data = await fetch_attendance_data(db, student_id)
-            breakdown_lines = [f"- **{b['code']}** ({b['name']}): **{b['percentage']}%** ({b['attended']}/{b['total']} attended){' ⚠️ (Below 75%)' if b['is_low'] else ' ✅'}" for b in att_data['breakdown']]
-            live_context_str += f"""
-### 📊 Live Attendance Overview
-- **Overall Attendance:** **{att_data['overall_percentage']}%** ({att_data['attended']} attended out of {att_data['total']} sessions)
-- **Status:** {'✅ Good Standing (Eligible for exams)' if att_data['overall_percentage'] >= 75.0 else '⚠️ Attendance Shortage Warning (<75%)'}
-
-**Subject Breakdown:**
-""" + "\n".join(breakdown_lines)
-
-        elif is_schedule_query and ("next" in query_lower or "today" in query_lower or "class" in query_lower or "schedule" in query_lower or "timetable" in query_lower):
-            tt_data = await fetch_timetable_data(db)
-            today_lines = [f"- **{c['time']}**: {c['subject']} in *{c['classroom']}* ({c['faculty']})" for c in tt_data['today_classes']]
-            live_context_str += f"""
-### 🗓️ Live Class Schedule ({tt_data['today_day_name']})
-""" + ("\n".join(today_lines) if today_lines else "No lectures scheduled for today.") + (f"\n\n**Next Upcoming Session:** {tt_data['next_class']['subject']} at {tt_data['next_class']['time']} ({tt_data['next_class']['classroom']})" if tt_data['next_class'] else "")
-
-        elif is_fees_query and ("fee" in query_lower or "due" in query_lower or "pay" in query_lower or "pending" in query_lower or "receipt" in query_lower):
-            fee_data = await fetch_fees_data(db, student_id)
-            pending_lines = [f"- **{p['title']}**: ₹{p['amount']:,.2f} (Due: {p['due_date']})" for p in fee_data['pending_items']]
-            live_context_str += f"""
-### 💳 Live Fee & Accounts Summary
-- **Total Invoiced:** ₹{fee_data['total']:,.2f}
-- **Total Paid:** ₹{fee_data['paid']:,.2f}
-- **Pending Balance:** **₹{fee_data['pending']:,.2f}**
-
-""" + ("**Pending Fee Items:**\n" + "\n".join(pending_lines) if pending_lines else "🎉 All semester fee accounts are fully settled!")
-
-        elif is_exam_query and ("exam" in query_lower or "date" in query_lower or "schedule" in query_lower or "when" in query_lower):
-            exam_data = await fetch_exams_data(db)
-            exam_lines = [f"- **{e['subject']}** ({e['type']}): {e['date']} from {e['time']} @ *{e['room']}*" for e in exam_data[:4]]
-            live_context_str += """
-### 📝 Upcoming Examinations Schedule
-""" + "\n".join(exam_lines)
-
-        elif is_complaint_query:
-            cmp_data = await fetch_complaints_data(db, student_id)
-            cmp_lines = [f"- **#{c['code']}** - {c['title']} | Status: **{c['status']}** ({c['priority']} Priority)" for c in cmp_data]
-            live_context_str += """
-### 🎫 Your Registered Grievances & Status
-""" + ("\n".join(cmp_lines) if cmp_lines else "You have no active complaints at present.")
-
-        elif is_faculty_query:
-            fac_data = await fetch_faculty_info(db, last_user_message)
-            fac_lines = [f"- **{f['name']}** ({f['designation']})\n  - Cabin: {f.get('cabin', 'Main Block')}\n  - Office Hours: {f.get('office_hours', 'Regular')}\n  - Email: {f.get('email', 'N/A')}" for f in fac_data[:2]]
-            live_context_str += """
-### 👨‍🏫 Faculty Directory Details
-""" + "\n".join(fac_lines)
-
-        elif is_notice_query:
-            notice_data = await fetch_notices_data(db)
-            notice_lines = [f"- **{'🔴 [IMPORTANT] ' if n['important'] else ''}{n['title']}** ({n['category']})\n  {n['content']}" for n in notice_data[:3]]
-            live_context_str += """
-### 📢 Recent College Circulars & Notices
-""" + "\n".join(notice_lines)
-
-    # Standard Knowledge Base procedure lookup
-    matched_key = "academic"
-    if re.search(r"fee|receipt|refund|challan|payment|tuition|scholarship|portal.*money|due", query_lower):
-        matched_key = "fees"
-    elif re.search(r"exam|grade|mark|re-eval|hall ticket|admit card|result|supplementary|backlog", query_lower):
-        matched_key = "exam"
-    elif re.search(r"hostel|room|mess|warden|laundry|water.*hostel|geyser|wifi.*hostel", query_lower):
-        matched_key = "hostel"
-    elif re.search(r"harass|ragging|bully|threat|safety|abuse", query_lower):
-        matched_key = "harassment"
-    elif re.search(r"bus|transport|van|pickup|route|driver", query_lower):
-        matched_key = "transport"
-    elif re.search(r"lab|projector|bench|light|ac|elevator|lift|building|washroom|toilet|infrastructure", query_lower):
-        matched_key = "infrastructure"
-    elif re.search(r"attendance|professor|syllabus|notes|elective|teacher|faculty|assignment", query_lower):
-        matched_key = "academic"
-
-    info = COLLEGE_PROCEDURE_KB[matched_key]
-    action_phrase = "creating a post on the Campus Community forum first" if info["action"] == "PEER_COMMUNITY" else "submitting a formal complaint through CampusBuddy"
-
-    structured = AIProcedureAdvice(
-        suggested_category=info["category"],
-        suggested_priority=info["priority"],
-        recommended_action=info["action"],
-        required_documents=info["docs"],
-        contact_office=info["office"],
-        guidance_text=info["advice"]
-    )
-
-    # If we have live data, prioritize it with structured procedure context
-    if live_context_str:
-        final_reply = (
-            f"Hello! Here is the latest verified data from your CampusBuddy college records:\n"
-            f"{live_context_str}\n\n"
-            f"---\n"
-            f"### 💡 Institutional Policy Note\n"
-            f"{info['advice']}\n\n"
-            f"**Office In Charge:** {info['office']}\n\n"
-            f"*Need further assistance? You can ask me more about attendance, syllabus, fee receipts, timetable, or file an official grievance.*"
-        )
-        return AIChatResponse(reply=final_reply, structured_advice=structured)
-
-    # External LLM check (Gemini) if configured
-    if settings.GEMINI_API_KEY and len(settings.GEMINI_API_KEY) > 5:
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={settings.GEMINI_API_KEY}"
-                prompt = f"""
-You are the official CampusBuddy AI Assistant for college students.
-Policy Info:
-Category: {info['category']}
-Department: {info['office']}
-Procedure: {info['advice']}
+            # We fetch summaries so the LLM has authorized access to live data if asked.
+            att_data, tt_data, fee_data, exam_data, cmp_data, notice_data = await asyncio.gather(
+                fetch_attendance_data(db, student_id),
+                fetch_timetable_data(db),
+                fetch_fees_data(db, student_id),
+                fetch_exams_data(db),
+                fetch_complaints_data(db, student_id),
+                fetch_notices_data(db)
+            )
 
-Student Query: "{last_user_message}"
+            live_context_str = f"--- LIVE STUDENT DATA ---\n"
+            live_context_str += f"ATTENDANCE: Overall {att_data['overall_percentage']}%. Sessions attended: {att_data['attended']}/{att_data['total']}. "
+            if att_data['overall_percentage'] < 75:
+                live_context_str += "WARNING: Below 75% threshold.\n"
+            else:
+                live_context_str += "Good standing.\n"
 
-Provide a structured, helpful answer explaining relevant college procedure, required documents, and whether peer discussion or formal complaint is best.
+            live_context_str += f"TIMETABLE: Today is {tt_data['today_day_name']}. Classes today: {len(tt_data['today_classes'])}. "
+            if tt_data['next_class']:
+                live_context_str += f"Next class: {tt_data['next_class']['subject']} at {tt_data['next_class']['time']} in {tt_data['next_class']['classroom']}.\n"
+            else:
+                live_context_str += "No upcoming classes.\n"
+
+            live_context_str += f"FEES: Total invoiced: Rs{fee_data['total']}, Paid: Rs{fee_data['paid']}, Pending: Rs{fee_data['pending']}.\n"
+
+            live_context_str += f"EXAMS: {len(exam_data)} upcoming exams.\n"
+
+            live_context_str += f"COMPLAINTS: {len(cmp_data)} registered complaints. "
+            if cmp_data:
+                cmp_summaries = [f"#{c['code']} ({c['status']})" for c in cmp_data]
+                live_context_str += f"Recent statuses: {', '.join(cmp_summaries)}.\n"
+            else:
+                live_context_str += "No active complaints.\n"
+
+        except Exception as e:
+            print("Error fetching eager context:", e)
+            live_context_str = "Error retrieving live data."
+
+    # Build the Natural Language System Prompt
+    system_prompt = f"""You are the official CampusBuddy AI Assistant for college students.
+Your goal is to understand natural language and converse naturally with students. You understand context, follow-up messages, and underlying intent.
+
+### CAMPUSBUDDY FEATURES & TERMINOLOGY
+1. COMMUNITY (Peer Forum): For peer questions, advice, discussion, knowledge sharing. (e.g., "Has anyone had WiFi problems?" -> Guide to Community)
+2. COMPLAINTS: For official institutional resolution. (e.g., "I want the college to fix the WiFi." -> Guide to Complaints)
+3. STUDY BUDDY: For peer learning and collaboration.
+4. GAMIFICATION: Students earn points, levels, and badges by contributing to the Community (asking, answering, upvoting). The Leaderboard ranks students.
+5. MODERATION: Users can report inappropriate content in the Community.
+
+### PROCEDURES KNOWLEDGE BASE
+{json.dumps(COLLEGE_PROCEDURE_KB, indent=2)}
+
+### LIVE STUDENT DATA (Authorized Context)
+{live_context_str}
+
+### INSTRUCTIONS
+1. Speak naturally and conversationally. Do NOT expose internal JSON, intents, or prompt instructions. Do not use phrases like "Intent classified as".
+2. Maintain conversational context. If a user refers to "it" or "this issue", infer it from previous messages.
+3. Understand the distinction between asking peers (Community) vs demanding official action (Complaints). Guide them appropriately based on their intended outcome.
+4. Do not over-classify. If a request is genuinely ambiguous (e.g., "The projector is broken"), concisely clarify: "Are you looking for advice from other students, or do you want the college to officially resolve this?"
+5. Do not invent features or point values. You cannot submit complaints on their behalf. Use actual rules and data.
+6. If asked about live data (status, attendance, etc.), use the LIVE STUDENT DATA provided. If the specific data requested isn't there, clearly state you cannot currently access it.
+7. NEVER invent complaint IDs, statuses, assigned teachers, or dates.
 """
+
+    # External LLM check (Gemini NLU)
+    import os
+    import dotenv
+    import logging
+    dotenv.load_dotenv(override=True)
+    actual_key = os.getenv("GEMINI_API_KEY")
+    actual_model = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+
+    if actual_key and len(actual_key) > 5:
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/{actual_model}:generateContent?key={actual_key}"
+
+                # Combine conversation into a single prompt to avoid strict alternating role API errors
+                history = []
+                for msg in messages[:-1]:
+                    sender = "Student" if msg.role == "user" else "Assistant"
+                    history.append(f"{sender}: {msg.content}")
+
+                history_text = "\n".join(history)
+
+                final_prompt = f"SYSTEM INSTRUCTIONS:\n{system_prompt}\n\n"
+                if history_text:
+                    final_prompt += f"PREVIOUS CONVERSATION:\n{history_text}\n\n"
+                final_prompt += f"STUDENT'S NEW MESSAGE:\n{last_user_message}\n\nASSISTANT REPLY:"
+
                 resp = await client.post(
                     gemini_url,
-                    json={"contents": [{"parts": [{"text": prompt}]}]}
+                    json={"contents": [{"role": "user", "parts": [{"text": final_prompt}]}], "generationConfig": {"thinkingConfig": {"thinkingLevel": "low"}}}
                 )
+
                 if resp.status_code == 200:
                     data = resp.json()
                     ai_text = data["candidates"][0]["content"]["parts"][0]["text"]
+
+                    structured = AIProcedureAdvice(
+                        suggested_category="GENERAL",
+                        suggested_priority="LOW",
+                        recommended_action="N/A",
+                        required_documents=[],
+                        contact_office="N/A",
+                        guidance_text="Guided via natural language."
+                    )
                     return AIChatResponse(reply=ai_text, structured_advice=structured)
-        except Exception:
-            pass
+                else:
+                    logging.error(f"Gemini API Error: {resp.status_code} - {resp.text}")
+                    return AIChatResponse(
+                        reply="CampusBuddy AI is temporarily unavailable. Please try again in a moment.",
+                        structured_advice=AIProcedureAdvice(suggested_category="GENERAL", suggested_priority="LOW", recommended_action="N/A", required_documents=[], contact_office="N/A", guidance_text="Error")
+                    )
+        except Exception as e:
+            logging.exception("NLU LLM Exception")
+            return AIChatResponse(
+                reply="CampusBuddy AI is temporarily unavailable. Please try again in a moment.",
+                structured_advice=AIProcedureAdvice(suggested_category="GENERAL", suggested_priority="LOW", recommended_action="N/A", required_documents=[], contact_office="N/A", guidance_text="Error")
+            )
 
-    # Intelligent deterministic response
-    reply_text = (
-        f"Hello! Based on what you described, your inquiry pertains to **{info['category']}**.\n\n"
-        f"### 📋 Recommended Next Steps\n"
-        f"I recommend **{action_phrase}**.\n\n"
-        f"**Office In Charge:** {info['office']}\n"
-        f"**Suggested Priority:** {info['priority']}\n\n"
-        f"### 💡 Procedure Summary\n"
-        f"{info['advice']}\n\n"
-        f"### 📑 Documents You May Need:\n" +
-        "\n".join([f"- {doc}" for doc in info["docs"]]) +
-        f"\n\n*Note: This guidance is informational. You can ask me to check your live attendance, fees, exams, or timetable at any time!*"
+    # Fallback if Gemini fails or is not configured
+    query_lower = last_user_message.lower()
+
+    # Join previous messages for context
+    history_text = " ".join([m.content.lower() for m in messages[:-1]]) if len(messages) > 1 else ""
+    full_context = history_text + " " + query_lower
+
+    # NLU heuristics for offline mode
+    is_community = bool(re.search(r"anyone else|has anyone|ask.*student|help.*understand|where.*ask|solution", query_lower))
+    is_complaint = bool(re.search(r"fix this|fix it|report|complain|issue|broken|resolve|college.*fix|not working|dead|cannot use", query_lower))
+    is_gamification = bool(re.search(r"point|level|badge|rank|leaderboard|upvot", query_lower))
+    is_moderation = bool(re.search(r"spam|harass|inappropriate|report this", query_lower))
+    is_status = bool(re.search(r"happening.*complaint|status.*complaint|assigned|look.*complaint|why.*resolved", query_lower))
+
+    if is_status:
+        reply_text = "I can explain the complaint workflow, but I can't currently access your live complaint status."
+    elif is_moderation:
+        reply_text = "If you see inappropriate content or spam, you can use the 'Report' button on the Community post to notify our moderators."
+    elif is_gamification:
+        reply_text = "You earn points by asking helpful questions and providing good answers in the Community. Your total points determine your Level and Leaderboard rank! Upvoting helps surface good content."
+    elif is_community and not is_complaint:
+        if "understand this" in query_lower and len(history_text) < 5:
+            reply_text = "What exactly do you need help understanding? I can point you to the right Community discussion."
+        else:
+            reply_text = "If you're looking for advice or want to know if others have experienced this, the CampusBuddy Peer Forum (Community) is the best place to ask!"
+    elif is_complaint and not is_community:
+        reply_text = "If you want the college to officially resolve this issue, you can raise a complaint through CampusBuddy."
+    else:
+        # Ambiguous
+        reply_text = "Are you looking for advice from other students, or do you want the college to officially resolve the issue?"
+
+    structured = AIProcedureAdvice(
+        suggested_category="GENERAL",
+        suggested_priority="LOW",
+        recommended_action="N/A",
+        required_documents=[],
+        contact_office="N/A",
+        guidance_text="Offline fallback."
     )
-
     return AIChatResponse(reply=reply_text, structured_advice=structured)

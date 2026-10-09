@@ -40,3 +40,15 @@ uploads/# Agent and AI Files
 .planning/
 skills-lock.json
 shadcn-extension.json
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
+
+# Private user uploads
+uploads/
+backend/uploads/*
+!backend/uploads/.gitkeep

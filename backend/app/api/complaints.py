@@ -7,6 +7,8 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy import desc
 
 from app.core.database import get_db
+from app.core.file_validation import validate_upload
+from app.services.settings_service import get_setting
 from app.core.security import get_current_user, require_roles
 from app.models.user import User, UserRole
 from fastapi.responses import FileResponse
@@ -42,18 +44,26 @@ async def get_categories(db: AsyncSession = Depends(get_db)):
     categories = result.scalars().all()
     return [ComplaintCategoryResponse.model_validate(c) for c in categories]
 
-@router.post("", response_model=ComplaintResponse, status_code=status.HTTP_201_CREATED)
+async def _check_complaints_enabled(db: AsyncSession):
+    enabled = await get_setting(db, "complaints_enabled")
+    if enabled is False:
+        raise HTTPException(status_code=403, detail="Complaints module is currently disabled by administrators.")
+
 @router.post("/", response_model=ComplaintResponse, status_code=status.HTTP_201_CREATED)
+
 async def create_complaint(
     complaint_in: ComplaintCreate,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
+    await _check_complaints_enabled(db)
+
     if current_user.role != UserRole.STUDENT and current_user.role != UserRole.ADMIN:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only students can register complaints."
         )
+
 
     # Validate category
     cat_res = await db.execute(select(ComplaintCategory).where(ComplaintCategory.id == complaint_in.category_id))
@@ -164,14 +174,14 @@ async def list_complaints(
 
     if category_id:
         stmt = stmt.where(Complaint.category_id == category_id)
-        
+
     if status_filter and status_filter.strip().upper() != "ALL":
         try:
             status_enum = ComplaintStatus(status_filter.strip().upper())
             stmt = stmt.where(Complaint.status == status_enum)
         except ValueError:
             stmt = stmt.where(Complaint.status == status_filter.strip().upper())
-            
+
     if priority_filter and priority_filter.strip().upper() != "ALL":
         try:
             priority_enum = ComplaintPriority(priority_filter.strip().upper())
@@ -210,7 +220,7 @@ async def get_complaint_detail(
     # Strict Access Security Check
     if current_user.role == UserRole.STUDENT and complaint.student_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied. You can only view your own complaints.")
-    
+
     if current_user.role == UserRole.TEACHER and complaint.assigned_to != current_user.id and complaint.category.department != current_user.department:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied. Not authorized for this complaint.")
 
@@ -335,7 +345,7 @@ async def confirm_resolution(
 
     if not complaint or complaint.student_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Complaint not found.")
-    
+
     if complaint.status != ComplaintStatus.RESOLVED:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only resolved complaints can be confirmed as closed.")
 
@@ -375,7 +385,7 @@ async def reopen_complaint(
 
     if not complaint or complaint.student_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Complaint not found.")
-    
+
     if complaint.status != ComplaintStatus.RESOLVED:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only resolved complaints can be reopened.")
 
@@ -391,7 +401,7 @@ async def reopen_complaint(
         to_status=ComplaintStatus.REOPENED.value,
         remarks="Student reopened the complaint."
     )
-    
+
     # Notify assignee if any
     if complaint.assigned_to:
         await send_notification(
@@ -431,7 +441,7 @@ async def add_complaint_update(
     # Authorization
     if current_user.role == UserRole.STUDENT and complaint.student_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied.")
-    
+
     if current_user.role == UserRole.TEACHER and complaint.assigned_to != current_user.id and complaint.category.department != current_user.department:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied.")
 
@@ -443,7 +453,7 @@ async def add_complaint_update(
         to_status=complaint.status.value,
         remarks=remarks
     )
-    
+
     # Notifications
     if current_user.role in [UserRole.ADMIN, UserRole.TEACHER]:
         await send_notification(
@@ -476,13 +486,6 @@ import uuid
 UPLOAD_DIR = "uploads/complaints"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
-ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".pdf", ".doc", ".docx"}
-ALLOWED_MIME_TYPES = {
-    "image/jpeg", "image/png", "image/webp",
-    "application/pdf", "application/msword",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-}
 
 @router.post("/{complaint_id}/attachments")
 async def upload_attachment(
@@ -495,39 +498,28 @@ async def upload_attachment(
     stmt = select(Complaint).where(Complaint.id == complaint_id)
     res = await db.execute(stmt)
     complaint = res.scalars().first()
-    
+
     if not complaint:
         raise HTTPException(status_code=404, detail="Complaint not found")
-        
+
     if current_user.role == UserRole.STUDENT and complaint.student_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized")
-        
+
     # File validation
-    if not file.filename:
-        raise HTTPException(status_code=400, detail="Empty filename")
-        
-    ext = os.path.splitext(file.filename)[1].lower()
-    if ext not in ALLOWED_EXTENSIONS:
-        raise HTTPException(status_code=400, detail="Unsupported file extension")
-        
-    if file.content_type not in ALLOWED_MIME_TYPES:
-        raise HTTPException(status_code=400, detail="Unsupported MIME type")
-        
-    content = await file.read()
-    if len(content) > MAX_FILE_SIZE:
-        raise HTTPException(status_code=400, detail=f"File exceeds {MAX_FILE_SIZE//(1024*1024)}MB limit")
-        
+    content, ext = await validate_upload(db, file)
+    ext = '.' + ext
+
     # Save securely
     unique_filename = f"{uuid.uuid4()}{ext}"
     stored_path = os.path.join(UPLOAD_DIR, unique_filename)
-    
+
     import asyncio
     def write_file_sync(path, data):
         with open(path, 'wb') as out_file:
             out_file.write(data)
-            
+
     await asyncio.to_thread(write_file_sync, stored_path, content)
-        
+
     attachment = ComplaintAttachment(
         complaint_id=complaint_id,
         original_filename=file.filename,
@@ -537,11 +529,11 @@ async def upload_attachment(
         uploaded_by=current_user.id,
         created_at=datetime.now(timezone.utc)
     )
-    
+
     db.add(attachment)
     await db.commit()
     await db.refresh(attachment)
-    
+
     return {"message": "File uploaded successfully", "attachment_id": attachment.id}
 
 from app.core.security import settings
@@ -559,10 +551,10 @@ async def download_attachment(
     auth_header = request.headers.get("Authorization")
     if auth_header and auth_header.startswith("Bearer "):
         token = auth_header.split(" ")[1]
-        
+
     if not token:
         raise HTTPException(status_code=401, detail="Authentication required")
-        
+
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         user_id = int(payload.get("sub"))
@@ -578,20 +570,19 @@ async def download_attachment(
     stmt = select(ComplaintAttachment).options(selectinload(ComplaintAttachment.complaint)).where(ComplaintAttachment.id == attachment_id)
     res = await db.execute(stmt)
     attachment = res.scalars().first()
-    
+
     if not attachment:
         raise HTTPException(status_code=404, detail="Attachment not found")
-        
+
     complaint = attachment.complaint
     # Auth
     if current_user.role == UserRole.STUDENT and complaint.student_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized to view this attachment")
     if current_user.role == UserRole.TEACHER and complaint.assigned_to != current_user.id and complaint.category.department != current_user.department:
         raise HTTPException(status_code=403, detail="Not authorized to view this attachment")
-        
+
     file_path = os.path.join(UPLOAD_DIR, attachment.stored_filename)
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="File missing on disk")
-        
-    return FileResponse(file_path, filename=attachment.original_filename, media_type=attachment.mime_type)
 
+    return FileResponse(file_path, filename=attachment.original_filename, media_type=attachment.mime_type)

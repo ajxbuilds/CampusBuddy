@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
+from sqlalchemy import Column, UniqueConstraint, Integer, String, Text, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from app.core.database import Base
 
@@ -10,7 +10,8 @@ class Badge(Base):
     name = Column(String(100), unique=True, nullable=False)
     description = Column(String(255), nullable=False)
     icon = Column(String(50), nullable=False) # icon name e.g. "award", "star", "shield-check"
-    points_threshold = Column(Integer, default=0)
+    points_threshold = Column(Integer, default=0) # now represents criteria_value
+    criteria_type = Column(String(50), nullable=False, default="TOTAL_POINTS")
 
     user_badges = relationship("UserBadge", back_populates="badge")
 
@@ -28,10 +29,16 @@ class UserBadge(Base):
 class PointTransaction(Base):
     __tablename__ = "points_transactions"
 
+    __table_args__ = (
+        UniqueConstraint('user_id', 'event_type', 'reference_type', 'reference_id', name='uq_point_event_reference'),
+    )
+
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     points = Column(Integer, nullable=False) # e.g. +5, +10, +20
     reason = Column(String(255), nullable=False)
+    event_type = Column(String(50), nullable=False, default="CUSTOM")
+    metadata_payload = Column(Text, nullable=True)
     reference_type = Column(String(50), nullable=True) # "ANSWER_POSTED", "HELPFUL_ANSWER", "ACCEPTED_ANSWER"
     reference_id = Column(Integer, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)

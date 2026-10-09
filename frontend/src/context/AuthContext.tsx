@@ -7,7 +7,7 @@ interface AuthContextType {
   token: string | null;
   isLoading: boolean;
   login: (email: string, password: string, role?: UserRole) => Promise<void>;
-  quickLogin: (role: UserRole) => Promise<void>;
+
   register: (data: any) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
@@ -61,18 +61,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const quickLogin = async (role: UserRole) => {
-    const creds: Record<UserRole, { email: string; pass: string }> = {
-      STUDENT: { email: 'student@campusbuddy.edu', pass: 'Student@123' },
-      TEACHER: { email: 'teacher@campusbuddy.edu', pass: 'Teacher@123' },
-      ADMIN: { email: 'admin@campusbuddy.edu', pass: 'Admin@123' },
-    };
-    const c = creds[role];
-    if (c) {
-      await login(c.email, c.pass, role);
-    }
-  };
-
   const register = async (data: any) => {
     setIsLoading(true);
     try {
@@ -98,7 +86,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         token,
         isLoading,
         login,
-        quickLogin,
         register,
         logout,
         refreshUser,

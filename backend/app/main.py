@@ -1,7 +1,11 @@
+from dotenv import load_dotenv
+load_dotenv(override=True)
 import os
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from app.services.settings_service import get_setting
+from app.core.database import AsyncSessionLocal
 from fastapi.staticfiles import StaticFiles
 
 from app.core.config import settings
@@ -30,6 +34,18 @@ async def lifespan(app: FastAPI):
         await conn.run_sync(Base.metadata.create_all)
         from sqlalchemy import text
         try:
+            await conn.execute(text("ALTER TABLE votes ADD COLUMN vote_type VARCHAR(10) DEFAULT 'UPVOTE'"))
+        except Exception:
+            pass
+        try:
+            await conn.execute(text("ALTER TABLE community_posts ADD COLUMN downvotes_count INTEGER DEFAULT 0"))
+        except Exception:
+            pass
+        try:
+            await conn.execute(text("ALTER TABLE community_answers ADD COLUMN downvotes_count INTEGER DEFAULT 0"))
+        except Exception:
+            pass
+        try:
             await conn.execute(text("ALTER TABLE users ADD COLUMN auth_provider VARCHAR DEFAULT 'local'"))
         except Exception:
             pass
@@ -50,7 +66,25 @@ app = FastAPI(
 )
 
 # CORS Middleware
+
+@app.middleware("http")
+async def maintenance_mode_middleware(request: Request, call_next):
+    # Exclude admin routes, auth login, and health endpoints so admins aren't locked out
+    path = request.url.path
+    if not path.startswith("/api/admin") and not path.startswith("/api/auth/") and not path.startswith("/health"):
+        async with AsyncSessionLocal() as db:
+            maintenance = await get_setting(db, "maintenance_mode")
+            if maintenance is True:
+                # Need to return JSON response for middleware
+                from fastapi.responses import JSONResponse
+                return JSONResponse(
+                    status_code=503,
+                    content={"detail": "CampusBuddy is currently in maintenance mode. Please try again later."}
+                )
+    return await call_next(request)
+
 app.add_middleware(
+
     CORSMiddleware,
     allow_origins=settings.BACKEND_CORS_ORIGINS,
     allow_credentials=True,
@@ -58,9 +92,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount uploads directory for attachments
-os.makedirs("uploads", exist_ok=True)
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+# Uploads directory is ensured to exist, but NOT mounted statically for security.
+os.makedirs("uploads/complaints", exist_ok=True)
+os.makedirs("uploads/community", exist_ok=True)
 
 # Include API Routers
 app.include_router(auth_router, prefix=settings.API_V1_STR)

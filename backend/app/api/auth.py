@@ -12,6 +12,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.config import settings
 from app.core.database import get_db
+from app.services.settings_service import get_setting
 from app.core.security import (
     verify_password,
     get_password_hash,
@@ -20,15 +21,18 @@ from app.core.security import (
     decode_onboarding_token,
     get_current_user,
 )
+from app.models.user_settings import UserSettings
+from app.schemas.user_settings import UserSettingsResponse, UserSettingsUpdate
 from app.models.user import User, UserRole, StudentProfile
 from app.models.gamification import PointTransaction
 from app.schemas.user import (
-    UserCreate, 
-    UserLogin, 
-    UserResponse, 
+    UserCreate,
+    UserLogin,
+    UserResponse,
     Token,
     GoogleAuthUrlResponse,
     GoogleOnboardRequest,
+    StudentProfileUpdate
 )
 from app.services.complaint_service import create_audit_log
 
@@ -36,6 +40,10 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 @router.post("/register", response_model=Token, status_code=status.HTTP_201_CREATED)
 async def register(user_in: UserCreate, db: AsyncSession = Depends(get_db)):
+    reg_enabled = await get_setting(db, "public_registration_enabled")
+    if reg_enabled is False:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Public registration is currently disabled by administrators.")
+
     # CRITICAL SECURITY GUARD: Disallow public creation of ADMIN accounts
     if user_in.role == UserRole.ADMIN or str(user_in.role).upper() == "ADMIN":
         raise HTTPException(
@@ -78,7 +86,7 @@ async def register(user_in: UserCreate, db: AsyncSession = Depends(get_db)):
 
     # If student, create student profile
     if user_in.role == UserRole.STUDENT:
-        roll = user_in.roll_number or f"CB-{user.id:04d}"
+        roll = user_in.roll_number or f"S-{user.id:04d}"
         profile = StudentProfile(
             user_id=user.id,
             roll_number=roll,
@@ -114,6 +122,13 @@ async def login(credentials: UserLogin, db: AsyncSession = Depends(get_db)):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password.",
             headers={"WWW-Authenticate": "Bearer"},
+        )
+
+
+    if credentials.role and user.role != credentials.role:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Account exists but does not have the requested {credentials.role} role."
         )
 
     if not user.is_active:
@@ -265,7 +280,7 @@ async def google_callback(
             if token_res.status_code != 200:
                 err_detail = token_res.text
                 return RedirectResponse(f"{settings.FRONTEND_URL}/login?error=failed_token_exchange")
-            
+
             token_json = token_res.json()
             google_access_token = token_json.get("access_token")
 
@@ -276,7 +291,7 @@ async def google_callback(
             )
             if userinfo_res.status_code != 200:
                 return RedirectResponse(f"{settings.FRONTEND_URL}/login?error=failed_userinfo_fetch")
-            
+
             userinfo = userinfo_res.json()
     except Exception as exc:
         return RedirectResponse(f"{settings.FRONTEND_URL}/login?error={urllib.parse.quote(str(exc))}")
@@ -331,49 +346,6 @@ async def google_callback(
         })
         return RedirectResponse(f"{settings.FRONTEND_URL}/onboarding?token={onboarding_token}")
 
-@router.post("/google/dev-simulate")
-async def google_dev_simulate(
-    email: str = "google.student@campusbuddy.edu",
-    name: str = "Google Student",
-    picture: Optional[str] = "https://api.dicebear.com/7.x/avataaars/svg?seed=google-student",
-    db: AsyncSession = Depends(get_db)
-):
-    """
-    Developer helper: allows local testing of Google OAuth flow without needing live GCP credentials.
-    CRITICAL SECURITY GUARD: Block any attempt to simulate ADMIN accounts.
-    """
-    stmt = select(User).options(selectinload(User.student_profile)).where(User.email == email)
-    res = await db.execute(stmt)
-    existing = res.scalars().first()
-
-    # STRICT SECURITY GUARD: Never simulate or issue tokens for ADMIN accounts
-    if existing and (existing.role == UserRole.ADMIN or str(existing.role).upper() == "ADMIN"):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Security Violation: Administrator accounts cannot be simulated or accessed via development simulation."
-        )
-
-    if existing:
-        token = create_access_token(data={"sub": str(existing.id), "role": str(existing.role.value)})
-        return {
-            "status": "linked",
-            "action": "login",
-            "redirect_url": f"/auth/callback?token={token}",
-            "token": token
-        }
-
-    onboarding_token = create_onboarding_token({
-        "sub": f"google-sim-{secrets.token_hex(6)}",
-        "email": email,
-        "name": name,
-        "picture": picture,
-    })
-    return {
-        "status": "new_user",
-        "action": "onboard",
-        "redirect_url": f"/onboarding?token={onboarding_token}",
-        "onboarding_token": onboarding_token
-    }
 
 @router.post("/google/onboard", response_model=Token)
 async def google_onboard(
@@ -433,12 +405,12 @@ async def google_onboard(
 
     # 5. Role-specific profile initialization
     if onboard_in.role == UserRole.STUDENT:
-        roll = onboard_in.roll_number or f"CB-G{user.id:04d}"
+        roll = onboard_in.roll_number or f"S-{user.id:04d}"
         # Ensure roll number uniqueness
         existing_roll = await db.execute(select(StudentProfile).where(StudentProfile.roll_number == roll))
         if existing_roll.scalars().first():
             roll = f"{roll}-{secrets.token_hex(2)}"
-        
+
         profile = StudentProfile(
             user_id=user.id,
             roll_number=roll,
@@ -483,3 +455,77 @@ async def google_onboard(
     )
 
 
+
+@router.put("/me/profile", response_model=UserResponse)
+async def update_current_user_profile(
+    profile_update: StudentProfileUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    stmt = select(User).options(selectinload(User.student_profile)).where(User.id == current_user.id)
+    res = await db.execute(stmt)
+    user = res.scalars().first()
+
+    if getattr(profile_update, 'department', None) is not None:
+        user.department = profile_update.department
+    if user.student_profile:
+        if getattr(profile_update, 'roll_number', None) is not None:
+            user.student_profile.roll_number = profile_update.roll_number
+        if getattr(profile_update, 'year', None) is not None:
+            user.student_profile.year = profile_update.year
+        if getattr(profile_update, 'division', None) is not None:
+            user.student_profile.division = profile_update.division
+        if profile_update.semester is not None:
+            user.student_profile.semester = profile_update.semester
+        if profile_update.program is not None:
+            user.student_profile.program = profile_update.program
+        if profile_update.skills is not None:
+            user.student_profile.skills = profile_update.skills
+        if profile_update.interests is not None:
+            user.student_profile.interests = profile_update.interests
+        if profile_update.help_areas is not None:
+            user.student_profile.help_areas = profile_update.help_areas
+        if profile_update.goals is not None:
+            user.student_profile.goals = profile_update.goals
+
+    await db.commit()
+    # Fetch again to ensure relationships are loaded without greenlet errors
+    res = await db.execute(select(User).options(selectinload(User.student_profile)).where(User.id == current_user.id))
+    user = res.scalars().first()
+    return UserResponse.model_validate(user)
+
+@router.get("/me/settings", response_model=UserSettingsResponse)
+async def get_my_settings(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    stmt = select(UserSettings).where(UserSettings.user_id == current_user.id)
+    res = await db.execute(stmt)
+    user_settings = res.scalars().first()
+    if not user_settings:
+        # Create default
+        user_settings = UserSettings(user_id=current_user.id)
+        db.add(user_settings)
+        await db.commit()
+        await db.refresh(user_settings)
+    return user_settings
+
+@router.put("/me/settings", response_model=UserSettingsResponse)
+async def update_my_settings(
+    settings_update: UserSettingsUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    stmt = select(UserSettings).where(UserSettings.user_id == current_user.id)
+    res = await db.execute(stmt)
+    user_settings = res.scalars().first()
+
+    if not user_settings:
+        user_settings = UserSettings(user_id=current_user.id)
+        db.add(user_settings)
+        await db.flush()
+
+    update_data = settings_update.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(user_settings, field, value)
+
+    await db.commit()
+    await db.refresh(user_settings)
+    return user_settings

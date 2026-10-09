@@ -21,10 +21,9 @@ import { AdminLoginPage } from './pages/login/AdminLoginPage';
 import { StudentDashboard } from './pages/StudentDashboard';
 import { TeacherDashboard } from './pages/TeacherDashboard';
 import { AdminDashboard } from './pages/AdminDashboard';
-import { 
-  AdminUsersPage, AdminComplaintsPage, AdminEscalationsPage, 
-  AdminCommunityPage, AdminReportsPage, AdminContributionsPage, AdminSystemPage, 
-  AdminImportPage, AdminAuditLogsPage 
+import {
+  AdminUsersPage, AdminComplaintsPage, AdminEscalationsPage,
+  AdminCommunityPage, AdminReportsPage, AdminContributionsPage, AdminSystemPage, AdminAuditLogsPage, AdminHealthPage
 } from './pages/admin/AdminPages';
 
 
@@ -35,6 +34,7 @@ import { CommunityPage } from './pages/CommunityPage';
 import { QuestionDetailPage } from './pages/QuestionDetailPage';
 import { AIAssistantPage } from './pages/AIAssistantPage';
 import { LeaderboardPage } from './pages/LeaderboardPage';
+import { SettingsPage } from './pages/SettingsPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { StudyBuddyPage } from './pages/StudyBuddyPage';
 import { NotificationsPage } from './pages/NotificationsPage';
@@ -63,7 +63,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; allowedRoles?: strin
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
@@ -144,7 +144,6 @@ export const App: React.FC = () => {
         <Routes>
           {/* ============ PUBLIC ROUTES (Top Navbar) ============ */}
           <Route path="/" element={<PublicLayout><LandingPage /></PublicLayout>} />
-          <Route path="/login" element={<PublicLayout><LoginPage /></PublicLayout>} />
           <Route path="/login/student" element={<PublicLayout><StudentLoginPage /></PublicLayout>} />
           <Route path="/login/teacher" element={<PublicLayout><TeacherLoginPage /></PublicLayout>} />
           <Route path="/login/admin" element={<PublicLayout><AdminLoginPage /></PublicLayout>} />
@@ -153,7 +152,7 @@ export const App: React.FC = () => {
           <Route path="/onboarding" element={<PublicLayout><OnboardingPage /></PublicLayout>} />
 
           {/* ============ AUTHENTICATED ROUTES (Sidebar Layout) ============ */}
-          
+
           {/* Dashboard Routes */}
           <Route path="/dashboard" element={<AuthenticatedLayout><SmartDashboard /></AuthenticatedLayout>} />
           <Route path="/student/dashboard" element={<Navigate to="/dashboard" replace />} />
@@ -162,7 +161,7 @@ export const App: React.FC = () => {
 
           {/* Role-Specific Dashboards */}
           <Route path="/teacher" element={<AuthenticatedLayout allowedRoles={['TEACHER']}><TeacherDashboard /></AuthenticatedLayout>} />
-          
+
           <Route path="/admin" element={<AuthenticatedLayout allowedRoles={['ADMIN']}><AdminDashboard /></AuthenticatedLayout>} />
           <Route path="/admin/users" element={<AuthenticatedLayout allowedRoles={['ADMIN']}><AdminUsersPage /></AuthenticatedLayout>} />
           <Route path="/admin/community" element={<AuthenticatedLayout allowedRoles={['ADMIN']}><AdminCommunityPage /></AuthenticatedLayout>} />
@@ -171,8 +170,8 @@ export const App: React.FC = () => {
           <Route path="/admin/escalations" element={<AuthenticatedLayout allowedRoles={['ADMIN']}><AdminEscalationsPage /></AuthenticatedLayout>} />
           <Route path="/admin/contributions" element={<AuthenticatedLayout allowedRoles={['ADMIN']}><AdminContributionsPage /></AuthenticatedLayout>} />
           <Route path="/admin/system" element={<AuthenticatedLayout allowedRoles={['ADMIN']}><AdminSystemPage /></AuthenticatedLayout>} />
-          <Route path="/admin/import" element={<AuthenticatedLayout allowedRoles={['ADMIN']}><AdminImportPage /></AuthenticatedLayout>} />
-          <Route path="/admin/audit-logs" element={<AuthenticatedLayout allowedRoles={['ADMIN']}><AdminAuditLogsPage /></AuthenticatedLayout>} />
+          <Route path="/admin/health" element={<AuthenticatedLayout allowedRoles={['ADMIN']}><AdminHealthPage /></AuthenticatedLayout>} />
+                    <Route path="/admin/audit-logs" element={<AuthenticatedLayout allowedRoles={['ADMIN']}><AdminAuditLogsPage /></AuthenticatedLayout>} />
 
 
           {/* Complaints & Community */}
@@ -184,6 +183,7 @@ export const App: React.FC = () => {
           <Route path="/leaderboard" element={<AuthenticatedLayout><LeaderboardPage /></AuthenticatedLayout>} />
 
           {/* System Pages */}
+          <Route path="/settings" element={<AuthenticatedLayout allowedRoles={["STUDENT"]}><SettingsPage /></AuthenticatedLayout>} />
           <Route path="/profile" element={<AuthenticatedLayout><ProfilePage /></AuthenticatedLayout>} />
           <Route path="/notifications" element={<AuthenticatedLayout><NotificationsPage /></AuthenticatedLayout>} />
           <Route path="/study-buddy" element={<AuthenticatedLayout><StudyBuddyPage /></AuthenticatedLayout>} />
@@ -197,4 +197,3 @@ export const App: React.FC = () => {
 };
 
 export default App;
-

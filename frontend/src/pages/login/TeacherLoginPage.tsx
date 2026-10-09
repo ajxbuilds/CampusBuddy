@@ -6,7 +6,7 @@ import { api } from '../../services/api';
 import { AuthLayout } from '../../components/layout/AuthLayout';
 
 export const TeacherLoginPage: React.FC = () => {
-  const { login, quickLogin } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -37,19 +37,6 @@ export const TeacherLoginPage: React.FC = () => {
     }
   };
 
-  const handleQuick = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      await quickLogin('TEACHER');
-      navigate('/teacher');
-    } catch (err: any) {
-      setError(err.message || 'Demo login failed.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleGoogleClick = async () => {
     setGoogleLoading(true);
     setError(null);
@@ -67,26 +54,6 @@ export const TeacherLoginPage: React.FC = () => {
     }
   };
 
-  const handleDevSimulate = async () => {
-    setGoogleLoading(true);
-    try {
-      const res = await api.simulateGoogleLogin(
-        'google.teacher@campusbuddy.edu',
-        'Sarah Johnson'
-      );
-      if (res.action === 'login' && res.token) {
-        sessionStorage.setItem('cb_token', res.token);
-        navigate('/auth/callback?token=' + res.token);
-      } else if (res.action === 'onboard' && res.onboarding_token) {
-        navigate('/onboarding?token=' + res.onboarding_token);
-      }
-    } catch (err: any) {
-      setError(err.message || 'Dev simulation failed.');
-    } finally {
-      setGoogleLoading(false);
-      setShowConfigModal(false);
-    }
-  };
 
   return (
     <AuthLayout>
@@ -130,13 +97,13 @@ export const TeacherLoginPage: React.FC = () => {
         <div>
           <label className="block text-sm font-semibold text-slate-700 mb-1.5">Email Address</label>
           <div className="relative">
-            <input 
-              type="email" 
-              required 
-              placeholder="faculty@campusbuddy.edu" 
-              value={email} 
-              onChange={(e) => setEmail(e.target.value)} 
-              className="w-full pl-11 pr-4 h-14 text-base bg-[#F8FAFC] border border-[#DCE3EF] rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400" 
+            <input
+              type="email"
+              required
+              placeholder="Enter your email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full pl-11 pr-4 h-14 text-base bg-[#F8FAFC] border border-[#DCE3EF] rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400"
             />
             <Mail className="w-5 h-5 text-slate-400 absolute left-4 top-[18px]" />
           </div>
@@ -147,17 +114,17 @@ export const TeacherLoginPage: React.FC = () => {
             <button type="button" onClick={() => alert('Password reset link will be sent to your registered campus email address.')} className="text-[13px] text-blue-600 hover:underline font-semibold">Forgot password?</button>
           </div>
           <div className="relative">
-            <input 
-              type={showPassword ? 'text' : 'password'} 
-              required 
-              placeholder="••••••••" 
-              value={password} 
-              onChange={(e) => setPassword(e.target.value)} 
-              className="w-full pl-11 pr-11 h-14 text-base bg-[#F8FAFC] border border-[#DCE3EF] rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400" 
+            <input
+              type={showPassword ? 'text' : 'password'}
+              required
+              placeholder="Enter password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full pl-11 pr-11 h-14 text-base bg-[#F8FAFC] border border-[#DCE3EF] rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400"
             />
             <Lock className="w-5 h-5 text-slate-400 absolute left-4 top-[18px]" />
-            <button 
-              type="button" 
+            <button
+              type="button"
               onClick={() => setShowPassword(!showPassword)}
               className="absolute right-4 top-[18px] text-slate-400 hover:text-slate-600 focus:outline-none"
             >
@@ -177,11 +144,7 @@ export const TeacherLoginPage: React.FC = () => {
         </button>
       </form>
 
-      <div className="mt-8 pt-8 border-t border-[#DCE3EF]">
-        <button type="button" onClick={handleQuick} className="w-full py-3 text-sm font-bold rounded-xl bg-[#F8FAFC] border border-[#DCE3EF] text-slate-700 hover:bg-slate-100 transition-all text-center">
-          Try Demo Teacher Account
-        </button>
-      </div>
+
 
       <p className="text-center text-sm text-slate-500 mt-8">
         Don't have an account?{' '}
@@ -211,10 +174,7 @@ export const TeacherLoginPage: React.FC = () => {
               </div>
             </div>
             <div className="space-y-3">
-              <button type="button" onClick={handleDevSimulate} className="w-full h-12 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-sm transition-all flex items-center justify-center gap-2">
-                <Sparkles className="w-4 h-4 text-amber-300" />
-                Try Google OAuth Simulation (Dev Mode)
-              </button>
+
               <button type="button" onClick={() => setShowConfigModal(false)} className="w-full h-12 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold text-sm transition-all">
                 Close & Use Email/Password
               </button>

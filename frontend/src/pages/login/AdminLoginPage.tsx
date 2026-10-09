@@ -5,12 +5,12 @@ import { useAuth } from '../../context/AuthContext';
 import { AuthLayout } from '../../components/layout/AuthLayout';
 
 export const AdminLoginPage: React.FC = () => {
-  const { login, quickLogin } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  const [email, setEmail] = useState('admin@campusbuddy.edu');
-  const [password, setPassword] = useState('Admin@123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -29,19 +29,6 @@ export const AdminLoginPage: React.FC = () => {
       navigate('/admin');
     } catch (err: any) {
       setError(err.message || 'Invalid credentials.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleQuick = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      await quickLogin('ADMIN');
-      navigate('/admin');
-    } catch (err: any) {
-      setError(err.message || 'Demo login failed.');
     } finally {
       setLoading(false);
     }
@@ -69,13 +56,13 @@ export const AdminLoginPage: React.FC = () => {
         <div>
           <label className="block text-sm font-semibold text-slate-700 mb-1.5">Email Address</label>
           <div className="relative">
-            <input 
-              type="email" 
-              required 
-              placeholder="admin@campusbuddy.edu" 
-              value={email} 
-              onChange={(e) => setEmail(e.target.value)} 
-              className="w-full pl-11 pr-4 h-14 text-base bg-[#F8FAFC] border border-[#DCE3EF] rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400" 
+            <input
+              type="email"
+              required
+              placeholder="Enter your email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full pl-11 pr-4 h-14 text-base bg-[#F8FAFC] border border-[#DCE3EF] rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400"
             />
             <Mail className="w-5 h-5 text-slate-400 absolute left-4 top-[18px]" />
           </div>
@@ -86,17 +73,17 @@ export const AdminLoginPage: React.FC = () => {
             <button type="button" onClick={() => alert('Please contact IT support to reset your administrator password.')} className="text-[13px] text-blue-600 hover:underline font-semibold">Forgot password?</button>
           </div>
           <div className="relative">
-            <input 
-              type={showPassword ? 'text' : 'password'} 
-              required 
-              placeholder="••••••••" 
-              value={password} 
-              onChange={(e) => setPassword(e.target.value)} 
-              className="w-full pl-11 pr-11 h-14 text-base bg-[#F8FAFC] border border-[#DCE3EF] rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400" 
+            <input
+              type={showPassword ? 'text' : 'password'}
+              required
+              placeholder="Enter password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full pl-11 pr-11 h-14 text-base bg-[#F8FAFC] border border-[#DCE3EF] rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400"
             />
             <Lock className="w-5 h-5 text-slate-400 absolute left-4 top-[18px]" />
-            <button 
-              type="button" 
+            <button
+              type="button"
               onClick={() => setShowPassword(!showPassword)}
               className="absolute right-4 top-[18px] text-slate-400 hover:text-slate-600 focus:outline-none"
             >
@@ -116,11 +103,7 @@ export const AdminLoginPage: React.FC = () => {
         </button>
       </form>
 
-      <div className="mt-8 pt-8 border-t border-[#DCE3EF]">
-        <button type="button" onClick={handleQuick} className="w-full py-3 text-sm font-bold rounded-xl bg-[#F8FAFC] border border-[#DCE3EF] text-slate-700 hover:bg-slate-100 transition-all text-center">
-          Demo Admin Access
-        </button>
-      </div>
+
     </AuthLayout>
   );
 };

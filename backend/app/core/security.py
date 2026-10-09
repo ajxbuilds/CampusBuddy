@@ -40,13 +40,13 @@ def decode_onboarding_token(token: str) -> dict:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         if payload.get("type") != "google_onboard":
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, 
+                status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid onboarding token type."
             )
         return payload
     except JWTError:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, 
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid or expired onboarding session. Please log in with Google again."
         )
 
@@ -86,3 +86,23 @@ def require_roles(allowed_roles: List[str]):
             )
         return current_user
     return role_checker
+
+async def get_current_user_optional(token: Optional[str] = Depends(OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/login", auto_error=False)), db: AsyncSession = Depends(get_db)):
+    if not token:
+        return None
+    from app.models.user import User
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            return None
+        uid = int(user_id)
+    except Exception:
+        return None
+
+    stmt = select(User).where(User.id == uid)
+    result = await db.execute(stmt)
+    user = result.scalars().first()
+    if user and user.is_active:
+        return user
+    return None

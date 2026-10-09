@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
 import {
   Award,
   Flame,
@@ -16,6 +17,7 @@ import { LeaderboardResponse, Badge } from '../types';
 import { Skeleton } from '../components/ui/Skeleton';
 
 export const LeaderboardPage: React.FC = () => {
+  const { user } = useAuth();
   const [period, setPeriod] = useState<'weekly' | 'monthly' | 'all-time'>('all-time');
   const [data, setData] = useState<LeaderboardResponse | null>(null);
   const [badges, setBadges] = useState<Badge[]>([]);
@@ -140,13 +142,14 @@ export const LeaderboardPage: React.FC = () => {
                     <th className="px-6 py-4">Rank</th>
                     <th className="px-6 py-4">Scholar</th>
                     <th className="px-6 py-4">Department</th>
+                    <th className="px-6 py-4">Level</th>
                     <th className="px-6 py-4">Achievements</th>
                     <th className="px-6 py-4 text-right">Reputation</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {data.leaders.map((leader) => (
-                    <tr key={leader.user_id} className="hover:bg-blue-50/30 transition-colors group">
+                    <tr key={leader.user_id} className={`hover:bg-blue-50/30 transition-colors group ${user?.id === leader.user_id ? "bg-blue-50/50 border-y-2 border-blue-200" : ""}`}>
                       <td className="px-6 py-5 font-bold text-slate-900 whitespace-nowrap">
                         <span
                           className={`px-3 py-1.5 rounded-lg text-xs tracking-wide ${
@@ -187,6 +190,13 @@ export const LeaderboardPage: React.FC = () => {
                       </td>
 
                       <td className="px-6 py-5 whitespace-nowrap">
+                        <span className="text-xs font-bold text-blue-900 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-100">
+                          Lvl {leader.level}
+                        </span>
+                        <p className="text-[10px] text-slate-500 font-medium mt-1">{leader.level_name}</p>
+                      </td>
+
+                      <td className="px-6 py-5 whitespace-nowrap">
                         <div className="flex items-center gap-1.5">
                           {leader.badges.map((b) => (
                             <span
@@ -205,6 +215,49 @@ export const LeaderboardPage: React.FC = () => {
                       </td>
                     </tr>
                   ))}
+                  {user && data.current_user_entry && !data.leaders.some(l => l.user_id === user.id) && (
+                    <tr className="bg-blue-50/50 group border-t-2 border-blue-200">
+                      <td className="px-6 py-5 font-bold text-slate-900 whitespace-nowrap">
+                        <span className="px-3 py-1.5 rounded-lg text-xs tracking-wide text-slate-500 bg-slate-50 border border-slate-200 shadow-sm">
+                          #{data.current_user_entry.rank}
+                        </span>
+                      </td>
+                      <td className="px-6 py-5 whitespace-nowrap">
+                        <div className="flex items-center gap-4">
+                          <img
+                            src={data.current_user_entry.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + data.current_user_entry.full_name}
+                            alt=""
+                            className="w-10 h-10 rounded-full border-2 border-blue-400 shadow-sm"
+                          />
+                          <div>
+                            <p className="font-bold text-blue-950 text-base">{data.current_user_entry.full_name} <span className="ml-2 text-[10px] bg-blue-600 text-white px-2 py-0.5 rounded-full font-bold uppercase">You</span></p>
+                            <span className="text-xs text-slate-500 uppercase tracking-wider font-medium">{data.current_user_entry.role}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-5 text-slate-600 whitespace-nowrap font-medium">
+                        {data.current_user_entry.department || 'University Wide'}
+                      </td>
+                      <td className="px-6 py-5 whitespace-nowrap">
+                        <span className="text-xs font-bold text-blue-900 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-100">
+                          Lvl {data.current_user_entry.level}
+                        </span>
+                        <p className="text-[10px] text-slate-500 font-medium mt-1">{data.current_user_entry.level_name}</p>
+                      </td>
+                      <td className="px-6 py-5 whitespace-nowrap">
+                        <div className="flex items-center gap-1.5">
+                          {data.current_user_entry.badges.map((b) => (
+                            <span key={b.id} title={b.name + ': ' + b.description} className="w-8 h-8 rounded-full bg-slate-50 border border-slate-200 shadow-sm flex items-center justify-center cursor-help">
+                              {getBadgeIcon(b.icon)}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-6 py-5 text-right font-semibold text-blue-700 text-base whitespace-nowrap">
+                        {data.current_user_entry.points} <span className="text-sm font-normal text-slate-500">pts</span>
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -234,9 +287,7 @@ export const LeaderboardPage: React.FC = () => {
                     <div>
                       <div className="flex items-center justify-between gap-2 mb-1">
                         <h4 className="text-sm font-bold text-blue-950">{b.name}</h4>
-                        <span className="text-xs font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-100">
-                          {b.points_threshold} pts
-                        </span>
+
                       </div>
                       <p className="text-xs text-slate-600 leading-relaxed">{b.description}</p>
                     </div>
@@ -253,16 +304,16 @@ export const LeaderboardPage: React.FC = () => {
             </h4>
             <ul className="text-sm text-slate-600 space-y-3">
               <li className="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-100">
-                <span className="font-medium">Post helpful answer</span>
+                <span className="font-medium">Ask a question</span>
+                <span className="font-bold text-blue-600">+2 pts</span>
+              </li>
+              <li className="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-100">
+                <span className="font-medium">Post an answer</span>
                 <span className="font-bold text-blue-600">+5 pts</span>
               </li>
               <li className="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-100">
-                <span className="font-medium">Receive peer upvote</span>
-                <span className="font-bold text-blue-600">+10 pts</span>
-              </li>
-              <li className="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-100">
-                <span className="font-medium">Accepted as solution</span>
-                <span className="font-bold text-emerald-600">+20 pts</span>
+                <span className="font-medium">Answer accepted</span>
+                <span className="font-bold text-emerald-600">+10 pts</span>
               </li>
             </ul>
           </div>
@@ -271,4 +322,3 @@ export const LeaderboardPage: React.FC = () => {
     </div>
   );
 };
-

@@ -28,14 +28,13 @@ $$\text{Connect} \longrightarrow \text{Understand} \longrightarrow \text{Help} \
 
 ## 👥 4 User Roles & Access Control
 
-| Role | Demo Credentials | Key Capabilities |
+| Role | Access & Provisioning | Core Capabilities |
 | :--- | :--- | :--- |
-| **Student** | `student@campusbuddy.edu` / `Student@123` | File formal complaints, track visual status timeline, request escalations, ask AI assistant, post/answer peer questions, earn points/badges, view leaderboard. |
-| **Teacher** | `teacher@campusbuddy.edu` / `Teacher@123` | Inspect assigned department complaints, log official progress remarks, provide faculty-endorsed answers on the community forum. |
-| **Parent** | `parent@campusbuddy.edu` / `Parent@123` | Read-only transparent monitoring of linked ward's complaints, SLA status, escalation alerts, and resolution updates. |
-| **Administrator** | `admin@campusbuddy.edu` / `Admin@123` | Master control center: assign staff to complaints, approve/reject escalations, review moderation reports, inspect analytics charts, and review system audit trails. |
+| **Student** | Public Registration | File formal complaints, track visual status timeline, request escalations, ask AI assistant, post/answer peer questions, earn points/badges, view leaderboard. |
+| **Teacher** | Public Registration | Inspect assigned department complaints, log official progress remarks, provide faculty-endorsed answers on the community forum. |
+| **Administrator** | Secure CLI Provisioning | Master control center: assign staff to complaints, approve/reject escalations, review moderation reports, inspect analytics charts, and review system audit trails. |
 
-*Tip: A 1-Click Interactive Demo Switcher is located in the top navbar and landing page for instant role-switching during evaluations.*
+
 
 ---
 
@@ -69,9 +68,8 @@ CampusBuddy
 
 ## 🗄️ Normalized Database Schema (16 Entities)
 
-- **`users`**: Email, password hash (Bcrypt), full name, role (`STUDENT`, `TEACHER`, `PARENT`, `ADMIN`), department, avatar.
+- **`users`**: Email, password hash (Bcrypt), full name, role (`STUDENT`, `TEACHER`, `ADMIN`), department, avatar.
 - **`student_profiles`**: Roll number, semester, program, cumulative reputation points.
-- **`parent_links`**: Guardian-student link for verified transparent access.
 - **`complaint_categories`**: Category name, code, in-charge department, SLA turnaround hours.
 - **`complaints`**: Unique code (`CB-2026-001245`), student FK, category FK, title, description, priority, status, assignee FK, attachment URL, SLA deadline.
 - **`complaint_status_history`**: Chronological log of every status transition with actor FK and remarks.
@@ -115,8 +113,14 @@ backend/venv/Scripts/activate
 # Install dependencies
 pip install -r backend/requirements.txt
 
-# Populate database with rich demo data
+# Populate database with required reference data (categories, badges)
 python backend/seed.py
+
+# Securely provision the initial System Administrator
+# (Do NOT expose these credentials. Do NOT use them in public code.)
+export ADMIN_EMAIL="your.admin@university.edu"
+export ADMIN_PASSWORD="<StrongPassword>"
+python backend/create_admin.py
 
 # (Optional) Run automated backend validation suite
 python backend/test_api.py
@@ -148,7 +152,7 @@ Follow this exact flow during project defense to demonstrate all 14 milestones w
 
 1. **Open `http://localhost:5173`**:
    - Explore public Landing Page explaining the 5 pillars.
-   - Click **"Student"** on the 1-Click Interactive Demo Sandbox.
+   - Click **"Sign In"** and log into a registered Student account.
 2. **AI Procedure Diagnostic Guide**:
    - Click **AI Guide** in the navbar.
    - Ask: *"My semester fee payment was debited from my bank but portal says unpaid"*.
@@ -165,16 +169,15 @@ Follow this exact flow during project defense to demonstrate all 14 milestones w
    - Submit and receive a newly generated unique identifier (e.g. `CB-2026-001248`).
 6. **Live Chronological Timeline**:
    - Open the complaint detail view to inspect the visual resolution progress timeline.
-7. **Switch to Administrator / Faculty**:
-   - Using the top-right demo switcher, switch to **Admin User**.
+7. **Log in as Administrator**:
+   - Navigate securely to the unadvertised `/login/admin` route.
+   - Log in with the credentials provisioned via `create_admin.py`.
    - Navigate to `/admin`: view real-time KPIs (Total, Pending, In Progress, Escalated), Category volume charts, and 7-day Intake velocity.
    - Assign the newly submitted complaint to **Prof. Vikram Malhotra (Teacher)** and change status to `IN_PROGRESS`.
 8. **Student Notification & Escalation**:
-   - Switch back to **Student**: observe notification bell indicator.
+   - Log back in as **Student**: observe notification bell indicator.
    - If SLA is breached, click **"Request Escalation"** with a level and reason.
-9. **Parent Transparency**:
-   - Switch to **Parent (Sunil Sharma)**: see linked ward's complaints with read-only transparency and real-time status updates.
-10. **Resolution**:
+9. **Resolution**:
     - Mark complaint `RESOLVED` with official remarks; observe timeline completion.
 
 ---
@@ -256,7 +259,7 @@ CampusBuddy supports **dual authentication**:
    - **Existing User Linking**: If a user previously registered with email/password (e.g. `student@campusbuddy.edu`) logs in with Google, CampusBuddy automatically links the Google provider ID (`sub`), updates their avatar, and logs them in seamlessly without erasing complaints, points, or badges.
    - **New User Onboarding**: New Google sign-ups are routed to an onboarding screen to select their campus role (`Student`, `Teacher`, or `Parent`) and fill out academic details.
    - **Strict Admin Security Guard**: Administrator (`ADMIN`) accounts **cannot** be registered through public Google sign-up. Any attempt to onboard with the `ADMIN` role is blocked at the API level with HTTP `403 Forbidden`.
-   - **Local Developer Simulation**: If Google Cloud credentials are not yet configured, developers can click "Try Google OAuth Simulation (Dev Mode)" in the login dialog or use `/api/auth/google/dev-simulate` to test the complete OAuth callback and onboarding flow offline.
+
 
 ---
 

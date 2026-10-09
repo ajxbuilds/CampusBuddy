@@ -89,19 +89,15 @@ echo ----------------------------------------------------------------------
 echo Dedicated Role Portals & Authentication:
 echo.
 echo   [Student Portal]  http://localhost:5173/login/student
-echo     - Account: student@campusbuddy.edu / Student@123
 echo.
 echo   [Faculty Portal]  http://localhost:5173/login/teacher
-echo     - Account: teacher@campusbuddy.edu / Teacher@123
 echo.
 echo   [Admin Center]    http://localhost:5173/login/admin
-echo     - Account: admin@campusbuddy.edu / Admin@123
 echo ----------------------------------------------------------------------
 echo.
 echo Opening CampusBuddy in default browser in 3 seconds...
 timeout /t 3 /nobreak >nul
-start http://localhost:5173/login/student
-start http://localhost:5173/login/admin
+start http://localhost:5173/
 
 echo.
 echo Keep this launcher window open or press any key to close.

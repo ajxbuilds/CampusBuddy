@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, MessageSquare, Bot, Trophy, HelpCircle, User, Users,
-  LogOut, ChevronLeft, ChevronRight, GraduationCap, X, Shield, FileText, AlertTriangle, Settings, Upload, Flag, Link as LinkIcon
+  LogOut, ChevronLeft, ChevronRight, GraduationCap, X, Shield, FileText, AlertTriangle, Settings, Upload, Flag, Link as LinkIcon, Activity
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -36,7 +36,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, mobileOpe
 
   const getNavigation = (): NavSection[] => {
     const role = user?.role || 'STUDENT';
-    
+
     switch (role) {
       case 'STUDENT':
         return [
@@ -118,8 +118,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, mobileOpe
           {
             title: 'System',
             items: [
-              { label: 'Settings & Cats', path: '/admin/system', icon: Settings },
-              { label: 'Bulk Import', path: '/admin/import', icon: Upload }
+              { label: 'Settings', path: '/admin/system', icon: Settings },
+              { label: 'System Health', path: '/admin/health', icon: Activity },
+
             ]
           },
           {
@@ -140,14 +141,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, mobileOpe
     <>
       {/* Mobile Backdrop */}
       {mobileOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-navy-900/40 backdrop-blur-sm z-40 md:hidden transition-opacity"
           onClick={onMobileClose}
         />
       )}
 
       {/* Sidebar Content */}
-      <aside 
+      <aside
         className={`
           fixed md:static inset-y-0 left-0 z-50
           flex flex-col bg-navy-900 border-r border-navy-800
@@ -160,7 +161,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, mobileOpe
         <div className="flex items-center h-16 px-5 border-b border-navy-800/50 shrink-0">
           <img src="/logo.jpg" alt="CampusBuddy" className={`rounded-xl object-cover bg-white shadow-sm transition-all duration-300 ${collapsed ? 'w-8 h-8' : 'w-auto h-12'}`} />
           {mobileOpen && (
-            <button 
+            <button
               onClick={onMobileClose}
               className="ml-auto p-1.5 rounded-lg text-slate-400 hover:bg-navy-800 hover:text-white md:hidden transition-colors"
             >
@@ -188,7 +189,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, mobileOpe
                 {section.items.map((item, iIdx) => {
                   const isActive = location.pathname.startsWith(item.path);
                   const Icon = item.icon;
-                  
+
                   return (
                     <li key={iIdx}>
                       <Link
@@ -197,8 +198,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, mobileOpe
                         className={`
                           flex items-center px-3 py-2 rounded-xl transition-all duration-200 group relative
                           active:scale-95
-                          ${isActive 
-                            ? 'bg-brand-600/10 text-brand-500 font-medium' 
+                          ${isActive
+                            ? 'bg-brand-600/10 text-brand-500 font-medium'
                             : 'text-slate-400 hover:bg-navy-800 hover:text-slate-200'
                           }
                         `}
@@ -242,7 +243,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, mobileOpe
               Logout
             </span>
           </button>
-          
+
           <button
             onClick={onToggle}
             className={`

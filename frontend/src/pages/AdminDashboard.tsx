@@ -72,7 +72,7 @@ export const AdminDashboard: React.FC = () => {
       setCatDistribution(cats);
       setTrends(tr);
       setReports(rep);
-      setAuditLogs(logs);
+      setAuditLogs(logs.items || []);
       setStaff(stf);
     } catch (e) {
       console.error(e);
@@ -543,5 +543,3 @@ export const AdminDashboard: React.FC = () => {
     </div>
   );
 };
-
-

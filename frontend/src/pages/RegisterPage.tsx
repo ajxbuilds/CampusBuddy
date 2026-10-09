@@ -106,7 +106,7 @@ export const RegisterPage: React.FC = () => {
             <input
               type="email"
               required
-              placeholder="user@campusbuddy.edu"
+              placeholder="Enter your email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full pl-11 pr-4 h-14 text-base bg-[#F8FAFC] border border-[#DCE3EF] rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400"
@@ -123,14 +123,14 @@ export const RegisterPage: React.FC = () => {
             <input
               type={showPassword ? 'text' : 'password'}
               required
-              placeholder="••••••••"
+              placeholder="Enter password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full pl-11 pr-11 h-14 text-base bg-[#F8FAFC] border border-[#DCE3EF] rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400"
             />
             <Lock className="w-5 h-5 text-slate-400 absolute left-4 top-[18px]" />
-            <button 
-              type="button" 
+            <button
+              type="button"
               onClick={() => setShowPassword(!showPassword)}
               className="absolute right-4 top-[18px] text-slate-400 hover:text-slate-600 focus:outline-none"
             >
@@ -146,7 +146,7 @@ export const RegisterPage: React.FC = () => {
               <input
                 type="text"
                 required
-                placeholder="CS2023042"
+                placeholder="S1234567890"
                 value={rollNumber}
                 onChange={(e) => setRollNumber(e.target.value)}
                 className="w-full px-4 h-14 text-base bg-[#F8FAFC] border border-[#DCE3EF] rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400"
@@ -180,7 +180,7 @@ export const RegisterPage: React.FC = () => {
 
       <p className="text-center text-sm text-slate-500 mt-8">
         Already registered?{' '}
-        <Link to="/login" className="font-semibold text-blue-600 hover:text-blue-700 hover:underline">
+        <Link to="/login/student" className="font-semibold text-blue-600 hover:text-blue-700 hover:underline">
           Sign in
         </Link>
       </p>

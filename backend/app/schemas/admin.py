@@ -43,3 +43,34 @@ class UserRoleUpdate(BaseModel):
     role: str
     department: Optional[str] = None
     is_active: Optional[bool] = None
+
+class GamificationStatsResponse(BaseModel):
+    total_contributions: int
+    points_awarded: int
+    active_contributors: int
+    accepted_answers: int
+
+class GamificationChartPoint(BaseModel):
+    date: str
+    count: int
+    points: int
+
+class GamificationBreakdown(BaseModel):
+    event_type: str
+    count: int
+    points: int
+
+class TopContributor(BaseModel):
+    user_id: int
+    user_name: str
+    points: int
+    contributions: int
+
+class GamificationTransaction(BaseModel):
+    id: int
+    user_id: int
+    user_name: str
+    event_type: str
+    reason: str
+    points: int
+    created_at: datetime

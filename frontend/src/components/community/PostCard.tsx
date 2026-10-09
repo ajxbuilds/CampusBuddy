@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import {
-  ChevronUp,
+  ChevronUp, ChevronDown,
   MessageSquare,
   Eye,
   CheckCircle2,
@@ -23,7 +23,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onVote }) => {
       <button
         onClick={() => onVote && onVote(post.id)}
         className={`flex flex-col items-center justify-center min-w-[48px] py-2 px-1 rounded-xl border transition-all ${
-          post.has_voted
+          post.user_vote === 'UPVOTE'
             ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
             : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200'
         }`}

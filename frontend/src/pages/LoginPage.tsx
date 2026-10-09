@@ -6,25 +6,10 @@ import { UserRole } from '../types';
 import { AuthLayout } from '../components/layout/AuthLayout';
 
 export const LoginPage: React.FC = () => {
-  const { quickLogin } = useAuth();
+  const {  } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const handleQuick = async (role: UserRole) => {
-    setLoading(true);
-    setError(null);
-    try {
-      await quickLogin(role);
-      if (role === 'ADMIN') navigate('/admin');
-      else if (role === 'TEACHER') navigate('/teacher');
-      else navigate('/dashboard');
-    } catch (err: any) {
-      setError(err.message || 'Demo login failed.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <AuthLayout>
@@ -71,7 +56,7 @@ export const LoginPage: React.FC = () => {
           </div>
           <ArrowRight className="w-5 h-5 text-slate-300 group-hover:text-slate-700 transition-colors group-hover:translate-x-1" />
         </Link>
-        
+
         <Link
           to="/login/admin"
           className="flex items-center justify-between p-5 rounded-[16px] border border-[#DCE3EF] bg-[#F8FAFC] hover:border-slate-300 hover:bg-slate-100 hover:shadow-sm transition-all group active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-slate-500/20"
@@ -89,37 +74,7 @@ export const LoginPage: React.FC = () => {
         </Link>
       </div>
 
-      <div className="p-5 rounded-[16px] bg-[#F8FAFC] border border-[#DCE3EF] mb-8">
-        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-4 text-center">
-          Development Quick Access
-        </span>
-        <div className="grid grid-cols-3 gap-3">
-          <button
-            type="button"
-            disabled={loading}
-            onClick={() => handleQuick('STUDENT')}
-            className="px-4 py-3 text-[13px] font-bold rounded-xl bg-white border border-[#DCE3EF] text-slate-700 hover:border-blue-300 hover:text-blue-700 hover:shadow-sm transition-all text-center disabled:opacity-50 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-          >
-            🎓 Student
-          </button>
-          <button
-            type="button"
-            disabled={loading}
-            onClick={() => handleQuick('TEACHER')}
-            className="px-4 py-3 text-[13px] font-bold rounded-xl bg-white border border-[#DCE3EF] text-slate-700 hover:border-slate-400 hover:text-slate-900 hover:shadow-sm transition-all text-center disabled:opacity-50 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-slate-500/20"
-          >
-            👩‍🏫 Teacher
-          </button>
-          <button
-            type="button"
-            disabled={loading}
-            onClick={() => handleQuick('ADMIN')}
-            className="px-4 py-3 text-[13px] font-bold rounded-xl bg-white border border-[#DCE3EF] text-slate-700 hover:border-slate-400 hover:text-slate-900 hover:shadow-sm transition-all text-center disabled:opacity-50 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-slate-500/20"
-          >
-            🏛️ Admin
-          </button>
-        </div>
-      </div>
+
 
       <p className="text-center text-sm text-slate-500 font-medium">
         Don't have an account?{' '}

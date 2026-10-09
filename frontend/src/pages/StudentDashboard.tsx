@@ -3,24 +3,55 @@ import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { Link } from 'react-router-dom';
 import { LayoutDashboard, MessageSquare, HelpCircle, Trophy, Users, Clock, AlertCircle, ChevronRight, Activity } from 'lucide-react';
-import { Complaint, CommunityPost, LeaderboardResponse } from '../types';
+import { Complaint, CommunityPost, LeaderboardResponse, GamificationSummary } from '../types';
 import { Skeleton } from '../components/ui/Skeleton';
+import { animate, stagger } from 'animejs';
 
 export const StudentDashboard = () => {
   const { user } = useAuth();
+  const [summary, setSummary] = useState<GamificationSummary | null>(null);
+  const [badges, setBadges] = useState<any[]>([]);
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [posts, setPosts] = useState<CommunityPost[]>([]);
   const [leaderboard, setLeaderboard] = useState<LeaderboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!loading && summary) {
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (!prefersReducedMotion) {
+        animate('.dash-gamification-progress-bar', {
+          width: [0, summary.progress_percentage + '%'],
+          easing: 'easeOutExpo',
+          duration: 1500,
+          delay: 200
+        });
+
+        const el = document.getElementById('dash-gamification-points');
+        if (el) el.innerHTML = summary.points.toString();
+
+        animate('.dash-badge-icon', {
+          scale: [0.5, 1],
+          opacity: [0, 1],
+          delay: stagger(100, {start: 500}),
+          easing: 'easeOutBack'
+        });
+      }
+    }
+  }, [loading, summary]);
+
+  useEffect(() => {
     const loadData = async () => {
       try {
-        const [comps, psts, lb] = await Promise.all([
+        const [comps, psts, lb, sumRes, bData] = await Promise.all([
           api.listComplaints(),
           api.listPosts(),
-          api.getLeaderboard('monthly')
+          api.getLeaderboard('monthly'),
+          api.getGamificationSummary(),
+          api.getMyBadges()
         ]);
+        setSummary(sumRes);
+        setBadges(bData);
         setComplaints(comps.slice(0, 4));
         setPosts(psts.slice(0, 4));
         setLeaderboard(lb);
@@ -153,7 +184,7 @@ export const StudentDashboard = () => {
               View all <ChevronRight className="w-4 h-4" />
             </Link>
           </div>
-          
+
           <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden divide-y divide-slate-100">
             {posts.length > 0 ? posts.map(p => (
               <div key={p.id} className="p-6 hover:bg-slate-50 transition-colors">
@@ -183,7 +214,7 @@ export const StudentDashboard = () => {
             )}
           </div>
         </div>
-        
+
         {/* Sidebar: Complaints & Updates */}
         <div className="space-y-6">
           <div className="flex items-center justify-between">
@@ -223,4 +254,3 @@ export const StudentDashboard = () => {
     </div>
   );
 };
-

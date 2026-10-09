@@ -4,6 +4,7 @@ import {
   Award,
   Flame,
   Calendar,
+  Lock,
   ShieldCheck,
   CheckCircle2,
   HandHeart,
@@ -17,35 +18,127 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
-import { UserBadge, PointTransaction } from '../types';
+import AdminProfileView from './admin/AdminProfileView';
+import { UserBadge, PointTransaction, GamificationSummary } from '../types';
 import { Skeleton } from '../components/ui/Skeleton';
+import { animate, stagger } from 'animejs';
 
 export const ProfilePage: React.FC = () => {
-  const { user } = useAuth();
-  const [badges, setBadges] = useState<UserBadge[]>([]);
+  const { user, refreshUser } = useAuth();
+  const [allBadges, setAllBadges] = useState<any[]>([]);
+    const [badges, setBadges] = useState<UserBadge[]>([]);
   const [transactions, setTransactions] = useState<PointTransaction[]>([]);
+  const [summary, setSummary] = useState<GamificationSummary | null>(null);
   const [loading, setLoading] = useState(true);
 
-  
-  
-  
+  const [isEditing, setIsEditing] = useState(false);
+  const [formData, setFormData] = useState({
+    skills: user?.student_profile?.skills || '',
+    interests: user?.student_profile?.interests || '',
+    help_areas: user?.student_profile?.help_areas || '',
+    goals: user?.student_profile?.goals || '',
+    department: user?.department || '',
+    year: user?.student_profile?.year || '',
+    division: user?.student_profile?.division || '',
+    roll_number: user?.student_profile?.roll_number || '',
+    program: user?.student_profile?.program || ''
+  });
+  const [sbActive, setSbActive] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (user?.student_profile) {
+      setFormData({
+        skills: user.student_profile.skills || '',
+        interests: user.student_profile.interests || '',
+        help_areas: user.student_profile.help_areas || '',
+        goals: user.student_profile.goals || '',
+        department: user.department || '',
+        year: user.student_profile.year || '',
+        division: user.student_profile.division || '',
+        roll_number: user.student_profile.roll_number || '',
+        program: user.student_profile.program || ''
+      });
+    }
+  }, [user]);
+
+  useEffect(() => {
+    api.studyBuddy.getProfile().then(p => setSbActive(p.is_active)).catch(() => setSbActive(false));
+  }, []);
+
+  useEffect(() => {
+    if (!loading && summary) {
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (!prefersReducedMotion) {
+        // Animate progress bar
+        animate('.gamification-progress-bar', {
+
+          width: [0, summary.progress_percentage + '%'],
+          easing: 'easeOutExpo',
+          duration: 1500,
+          delay: 200
+        })
+
+        const el = document.getElementById('gamification-total-points');
+        if (el) el.innerHTML = summary.points.toString();
+
+        // Stagger list items
+        animate('.ledger-row', {
+
+          translateY: [20, 0],
+          opacity: [0, 1],
+          delay: stagger(100),
+          easing: 'easeOutExpo',
+          duration: 800
+        })
+      }
+    }
+  }, [loading, summary]);
+
+  const handleSaveProfile = async () => {
+    setSaving(true);
+    try {
+      await api.updateMyProfile(formData);
+      try {
+        await api.studyBuddy.updateProfile({ is_active: sbActive });
+      } catch (e) {
+        await api.studyBuddy.createProfile({ is_active: sbActive });
+      }
+      setIsEditing(false);
+      // optionally refresh user data from AuthContext
+      if (refreshUser) { await refreshUser(); }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSaving(false);
+    }
+  };
 
 
-  
 
-  
+
+
+
+
+
+
+
 
 
   useEffect(() => {
     const loadProfileData = async () => {
       setLoading(true);
       try {
-        const [bData, tData] = await Promise.all([
+        const [allB, bData, tData, sumData] = await Promise.all([
+          api.listBadges(),
           api.getMyBadges(),
           api.getMyTransactions(),
+          api.getGamificationSummary()
         ]);
+        setAllBadges(allB);
         setBadges(bData);
         setTransactions(tData);
+        setSummary(sumData);
       } catch (e) {
         console.error(e);
       } finally {
@@ -71,6 +164,10 @@ export const ProfilePage: React.FC = () => {
         return <Medal className="w-5 h-5 text-amber-500" />;
     }
   };
+
+    if (user?.role === 'ADMIN') {
+    return <AdminProfileView user={user} />;
+  }
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -143,7 +240,127 @@ export const ProfilePage: React.FC = () => {
         </div>
       )}
 
-      {/* Earned Badges Showcase */}
+
+      {/* Academic & Peer Learning Section */}
+      <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6">
+        <div className="pb-4 border-b border-slate-100 flex justify-between items-center">
+          <h2 className="text-xl font-bold text-blue-950 flex items-center gap-2">
+            <BookOpen className="w-5 h-5 text-blue-600" />
+            Academic & Peer Learning Profile
+          </h2>
+          {!isEditing ? (
+            <button onClick={() => setIsEditing(true)} className="px-4 py-1.5 text-sm font-semibold bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200">
+              Edit Profile
+            </button>
+          ) : (
+            <div className="flex gap-2">
+              <button onClick={() => setIsEditing(false)} className="px-4 py-1.5 text-sm font-semibold text-slate-500 hover:text-slate-700">Cancel</button>
+              <button onClick={handleSaveProfile} disabled={saving} className="px-4 py-1.5 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                {saving ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-1">Skills</label>
+            {isEditing ? (
+              <input type="text" className="w-full border rounded-lg p-2 text-sm" value={formData.skills} onChange={e => setFormData({...formData, skills: e.target.value})} placeholder="e.g. React, Python, Data Structures" />
+            ) : (
+              <p className="text-sm text-slate-600">{formData.skills || 'Not specified'}</p>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-1">Interests</label>
+            {isEditing ? (
+              <input type="text" className="w-full border rounded-lg p-2 text-sm" value={formData.interests} onChange={e => setFormData({...formData, interests: e.target.value})} placeholder="e.g. Machine Learning, Open Source" />
+            ) : (
+              <p className="text-sm text-slate-600">{formData.interests || 'Not specified'}</p>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-1">Areas I need help with</label>
+            {isEditing ? (
+              <input type="text" className="w-full border rounded-lg p-2 text-sm" value={formData.help_areas} onChange={e => setFormData({...formData, help_areas: e.target.value})} placeholder="e.g. Advanced Calculus, System Design" />
+            ) : (
+              <p className="text-sm text-slate-600">{formData.help_areas || 'Not specified'}</p>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-1">Learning Goals</label>
+            {isEditing ? (
+              <textarea className="w-full border rounded-lg p-2 text-sm" rows={3} value={formData.goals} onChange={e => setFormData({...formData, goals: e.target.value})} placeholder="What are you trying to achieve?" />
+            ) : (
+              <p className="text-sm text-slate-600 whitespace-pre-wrap">{formData.goals || 'Not specified'}</p>
+            )}
+          </div>
+          <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-slate-800">Appear in Study Buddy Discover</p>
+              <p className="text-xs text-slate-500">Allow other students to find you and connect.</p>
+            </div>
+            {isEditing ? (
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" className="sr-only peer" checked={sbActive} onChange={e => setSbActive(e.target.checked)} />
+                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              </label>
+            ) : (
+              <span className={`px-2.5 py-1 text-xs font-bold rounded-full ${sbActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
+                {sbActive ? 'Visible' : 'Hidden'}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+              {/* Level Progression Widget */}
+        {!loading && summary && (
+          <div className="bg-gradient-to-br from-blue-900 to-indigo-950 rounded-3xl border border-blue-800 p-6 sm:p-8 shadow-lg text-white relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+              <Award className="w-48 h-48" />
+            </div>
+
+            <div className="relative z-10">
+              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-8">
+                <div>
+                  <h3 className="text-blue-200 font-bold tracking-widest uppercase text-xs mb-1">Current Standing</h3>
+                  <div className="flex items-baseline gap-3">
+                    <span className="text-4xl sm:text-5xl font-black">Level {summary.level}</span>
+                    <span className="text-xl sm:text-2xl text-blue-100 font-medium tracking-tight">· {summary.level_name}</span>
+                  </div>
+                </div>
+                <div className="text-left sm:text-right">
+                  <div className="text-3xl font-black text-amber-400">{summary.points} <span className="text-sm text-blue-200 font-medium">total points</span></div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-sm font-semibold">
+                  <span className="text-blue-100">{summary.current_threshold} pts</span>
+                  {summary.next_threshold ? (
+                    <span className="text-blue-100">{summary.next_threshold} pts</span>
+                  ) : (
+                    <span className="text-amber-400">Max Level</span>
+                  )}
+                </div>
+                <div className="h-4 w-full bg-blue-950/50 rounded-full overflow-hidden border border-blue-800/50 p-0.5">
+                  <div
+                    className="h-full bg-gradient-to-r from-blue-500 to-indigo-400 rounded-full transition-all duration-1000 ease-out"
+                    style={{ width: summary.progress_percentage + "%" }}
+                  />
+                </div>
+                {summary.next_threshold && (
+                  <p className="text-sm text-blue-200 font-medium text-center sm:text-right">
+                    <span className="text-white font-bold">{summary.points_remaining} points</span> until Level {summary.level + 1}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Earned Badges Showcase */}
       <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6">
         <div className="pb-4 border-b border-slate-100">
           <h2 className="text-xl font-bold text-blue-950 flex items-center gap-2">
@@ -243,7 +460,3 @@ export const ProfilePage: React.FC = () => {
     </div>
   );
 };
-
-
-
-

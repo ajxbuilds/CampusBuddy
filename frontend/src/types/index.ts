@@ -5,7 +5,13 @@ export interface StudentProfile {
   roll_number: string;
   semester: number;
   program: string;
+  year?: string | null;
+  division?: string | null;
   total_points: number;
+  skills?: string;
+  interests?: string;
+  help_areas?: string;
+  goals?: string;
 }
 
 export interface User {
@@ -129,6 +135,25 @@ export interface Complaint {
   history?: ComplaintStatusHistory[];
   escalations?: ComplaintEscalation[];
   attachments?: ComplaintAttachment[];
+  resources?: CommunityResource[];
+}
+
+
+export interface CommunityReply {
+  id: number;
+  answer_id: number;
+  author_id: number;
+  parent_reply_id: number | null;
+  content: string;
+  upvotes_count: number;
+  downvotes_count: number;
+  is_hidden: boolean;
+  points_awarded?: number;
+  created_at: string;
+  updated_at: string;
+  author?: User | null;
+  user_vote?: 'UPVOTE' | 'DOWNVOTE' | null;
+  replies?: CommunityReply[];
 }
 
 export interface CommunityAnswer {
@@ -137,13 +162,25 @@ export interface CommunityAnswer {
   author_id: number;
   content: string;
   upvotes_count: number;
+  downvotes_count: number;
   is_accepted: boolean;
   is_faculty_endorsed: boolean;
   is_hidden: boolean;
+  points_awarded?: number;
   created_at: string;
   updated_at: string;
   author?: User | null;
-  has_voted?: boolean;
+  user_vote?: 'UPVOTE' | 'DOWNVOTE' | null;
+  replies?: CommunityReply[];
+}
+
+
+export interface CommunityResource {
+  id: number;
+  post_id: number;
+  url: string;
+  title?: string;
+  created_at: string;
 }
 
 export interface CommunityPost {
@@ -154,14 +191,18 @@ export interface CommunityPost {
   category: string;
   views: number;
   upvotes_count: number;
+  downvotes_count: number;
   answers_count: number;
   has_accepted_answer: boolean;
   is_hidden: boolean;
+  points_awarded?: number;
   created_at: string;
   updated_at: string;
   author?: User | null;
-  has_voted?: boolean;
+  user_vote?: 'UPVOTE' | 'DOWNVOTE' | null;
   answers?: CommunityAnswer[];
+  attachments?: ComplaintAttachment[];
+  resources?: CommunityResource[];
 }
 
 export interface Badge {
@@ -198,12 +239,15 @@ export interface LeaderboardUser {
   avatar_url?: string | null;
   points: number;
   rank: number;
+  level: number;
+  level_name: string;
   badges: Badge[];
 }
 
 export interface LeaderboardResponse {
   period: string;
   leaders: LeaderboardUser[];
+  current_user_entry?: LeaderboardUser;
 }
 
 export interface AppNotification {
@@ -337,4 +381,14 @@ export interface StudyBuddyConnection {
     avatar_url?: string;
     department?: string;
   };
+}
+
+export interface GamificationSummary {
+  points: number;
+  level: number;
+  level_name: string;
+  current_threshold: number;
+  next_threshold: number | null;
+  points_remaining: number;
+  progress_percentage: number;
 }
