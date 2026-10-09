@@ -1,29 +1,50 @@
+
 from typing import AsyncGenerator
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
+
+from sqlalchemy.engine import make_url
+from sqlalchemy.ext.asyncio import (
+    AsyncSession,
+    create_async_engine,
+    async_sessionmaker,
+)
 from sqlalchemy.orm import declarative_base
 from app.core.config import settings
 
-# Configure engine arguments based on database URL dialect
+database_url = make_url(settings.DATABASE_URL)
 connect_args = {}
-if settings.DATABASE_URL.startswith("sqlite"):
-    connect_args["check_same_thread"] = False
+
+if database_url.drivername in ("postgres", "postgresql"):
+    database_url = database_url.set(drivername="postgresql+asyncpg")
+    query = dict(database_url.query)
+    query.pop("sslmode", None)
+    query.pop("channel_binding", None)
+    database_url = database_url.set(query=query)
+    connect_args["ssl"] = "require"
+
+elif database_url.drivername == "postgresql+asyncpg":
+    query = dict(database_url.query)
+    query.pop("sslmode", None)
+    query.pop("channel_binding", None)
+    database_url = database_url.set(query=query)
+    connect_args["ssl"] = "require"
 
 engine = create_async_engine(
-    settings.DATABASE_URL,
+    database_url,
     echo=False,
     connect_args=connect_args,
-    future=True
+    future=True,
 )
 
 AsyncSessionLocal = async_sessionmaker(
     bind=engine,
     class_=AsyncSession,
     expire_on_commit=False,
-    autocommit=False,
     autoflush=False,
+    autocommit=False,
 )
 
 Base = declarative_base()
+
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionLocal() as session:
