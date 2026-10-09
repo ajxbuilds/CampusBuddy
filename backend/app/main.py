@@ -1,7 +1,7 @@
 
 from dotenv import load_dotenv
 
-load_dotenv(override=True)
+load_dotenv()
 
 import os
 from contextlib import asynccontextmanager
@@ -45,22 +45,38 @@ async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-        from sqlalchemy import text
+        def run_migrations(connection):
+            from sqlalchemy import inspect, text
+            inspector = inspect(connection)
 
-        migrations = [
-            "ALTER TABLE votes ADD COLUMN vote_type VARCHAR(10) DEFAULT 'UPVOTE'",
-            "ALTER TABLE community_posts ADD COLUMN downvotes_count INTEGER DEFAULT 0",
-            "ALTER TABLE community_answers ADD COLUMN downvotes_count INTEGER DEFAULT 0",
-            "ALTER TABLE users ADD COLUMN auth_provider VARCHAR DEFAULT 'local'",
-            "ALTER TABLE users ADD COLUMN provider_user_id VARCHAR",
-        ]
+            # Map of table_name -> dict of column definitions to ensure
+            migrations = {
+                "votes": {"vote_type": "VARCHAR(10) DEFAULT 'UPVOTE'"},
+                "community_posts": {"downvotes_count": "INTEGER DEFAULT 0"},
+                "community_answers": {"downvotes_count": "INTEGER DEFAULT 0"},
+                "users": {
+                    "auth_provider": "VARCHAR DEFAULT 'local'",
+                    "provider_user_id": "VARCHAR"
+                },
+                "student_profiles": {
+                    "year": "VARCHAR",
+                    "division": "VARCHAR",
+                    "program": "VARCHAR DEFAULT 'B.Tech Computer Science'",
+                    "skills": "VARCHAR",
+                    "interests": "VARCHAR",
+                    "help_areas": "VARCHAR",
+                    "goals": "TEXT"
+                }
+            }
 
-        for statement in migrations:
-            try:
-                await conn.execute(text(statement))
-            except Exception:
-                # The column may already exist.
-                pass
+            for table_name, columns in migrations.items():
+                if inspector.has_table(table_name):
+                    existing_cols = [c["name"] for c in inspector.get_columns(table_name)]
+                    for col_name, col_def in columns.items():
+                        if col_name not in existing_cols:
+                            connection.execute(text(f"ALTER TABLE {table_name} ADD COLUMN {col_name} {col_def}"))
+
+        await conn.run_sync(run_migrations)
 
     yield
 
@@ -106,10 +122,19 @@ async def maintenance_mode_middleware(request: Request, call_next):
     return await call_next(request)
 
 
+# Normalize and deduplicate CORS origins
+raw_origins = settings.BACKEND_CORS_ORIGINS + [settings.FRONTEND_URL]
+cleaned_origins = []
+for origin in raw_origins:
+    if origin and origin.strip():
+        cleaned_origins.append(origin.strip().rstrip("/"))
+
+origins = list(set(cleaned_origins))
+
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.BACKEND_CORS_ORIGINS,
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

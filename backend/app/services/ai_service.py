@@ -365,7 +365,7 @@ Your goal is to understand natural language and converse naturally with students
 
                 resp = await client.post(
                     gemini_url,
-                    json={"contents": [{"role": "user", "parts": [{"text": final_prompt}]}], "generationConfig": {"thinkingConfig": {"thinkingLevel": "low"}}}
+                    json={"contents": [{"role": "user", "parts": [{"text": final_prompt}]}], "generationConfig": {"temperature": 0.3}}
                 )
 
                 if resp.status_code == 200:
@@ -383,16 +383,10 @@ Your goal is to understand natural language and converse naturally with students
                     return AIChatResponse(reply=ai_text, structured_advice=structured)
                 else:
                     logging.error(f"Gemini API Error: {resp.status_code} - {resp.text}")
-                    return AIChatResponse(
-                        reply="CampusBuddy AI is temporarily unavailable. Please try again in a moment.",
-                        structured_advice=AIProcedureAdvice(suggested_category="GENERAL", suggested_priority="LOW", recommended_action="N/A", required_documents=[], contact_office="N/A", guidance_text="Error")
-                    )
+                    # Fallthrough to offline heuristics
         except Exception as e:
             logging.exception("NLU LLM Exception")
-            return AIChatResponse(
-                reply="CampusBuddy AI is temporarily unavailable. Please try again in a moment.",
-                structured_advice=AIProcedureAdvice(suggested_category="GENERAL", suggested_priority="LOW", recommended_action="N/A", required_documents=[], contact_office="N/A", guidance_text="Error")
-            )
+            # Fallthrough to offline heuristics
 
     # Fallback if Gemini fails or is not configured
     query_lower = last_user_message.lower()

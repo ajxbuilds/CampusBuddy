@@ -10,14 +10,14 @@ async def test_unauthorized_access(async_client):
 async def test_auth_roles(async_client, db_session):
     # Setup test users
     from app.core.security import create_access_token
-    student = User(id="std_1", email="student@test.com", role="STUDENT")
-    admin = User(id="adm_1", email="admin@test.com", role="ADMIN")
+    student = User(id=998, full_name="Student", email="student@test.com", role="STUDENT")
+    admin = User(id=999, full_name="Admin", email="admin@test.com", role="ADMIN")
     db_session.add(student)
     db_session.add(admin)
     await db_session.commit()
 
-    student_token = create_access_token(data={"sub": student.id, "role": student.role})
-    admin_token = create_access_token(data={"sub": admin.id, "role": admin.role})
+    student_token = create_access_token(data={"sub": str(student.id), "role": student.role if isinstance(student.role, str) else student.role.value})
+    admin_token = create_access_token(data={"sub": str(admin.id), "role": admin.role if isinstance(admin.role, str) else admin.role.value})
 
     # Test student hitting me
     resp1 = await async_client.get("/api/auth/me", headers={"Authorization": f"Bearer {student_token}"})
