@@ -24,7 +24,16 @@ import { StudyBuddyProfile, StudyBuddyProfileCreate, StudyBuddyDiscover, StudyBu
 } from '../types';
 
 
-export const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+const getApiBase = (): string => {
+  const envUrl = (import.meta.env.VITE_API_BASE_URL || '').trim();
+  if (!envUrl) {
+    return 'http://localhost:8000/api';
+  }
+  const cleanUrl = envUrl.replace(/\/+$/, '');
+  return cleanUrl.endsWith('/api') ? cleanUrl : `${cleanUrl}/api`;
+};
+
+export const API_BASE = getApiBase();
 
 function getToken(): string | null {
   return sessionStorage.getItem('cb_token');
