@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 import enum
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Enum, ForeignKey, Text
 from sqlalchemy.orm import relationship
-from app.core.database import Base
+from app.core.database import Base, utcnow
 
 class UserRole(str, enum.Enum):
     STUDENT = "STUDENT"
@@ -23,8 +23,8 @@ class User(Base):
     phone = Column(String, nullable=True)
     avatar_url = Column(String, nullable=True)
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
 
     # Relationships
     student_profile = relationship("StudentProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")

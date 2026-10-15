@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
-from app.core.database import Base
+from app.core.database import Base, utcnow
 
 class AuditLog(Base):
     __tablename__ = "audit_logs"
@@ -13,6 +13,6 @@ class AuditLog(Base):
     resource_id = Column(String(50), nullable=True)
     details = Column(Text, nullable=True)
     ip_address = Column(String(50), nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+    created_at = Column(DateTime, default=utcnow, index=True)
 
     actor = relationship("User")
