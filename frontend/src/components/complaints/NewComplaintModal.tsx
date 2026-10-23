@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, ShieldAlert, AlertCircle, Paperclip, Send } from 'lucide-react';
 import { ComplaintCategory, ComplaintPriority } from '../../types';
@@ -28,6 +28,23 @@ export const NewComplaintModal: React.FC<NewComplaintModalProps> = ({
   const [file, setFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (categories.length > 0) {
+      if (initialCategory) {
+        const match = categories.find(
+          (c) => c.code.toUpperCase() === initialCategory.toUpperCase()
+        );
+        if (match) {
+          setCategoryId(match.id);
+          return;
+        }
+      }
+      if (!categories.some((c) => c.id === categoryId)) {
+        setCategoryId(categories[0].id);
+      }
+    }
+  }, [categories, initialCategory]);
 
   if (!isOpen) return null;
 
@@ -101,17 +118,23 @@ export const NewComplaintModal: React.FC<NewComplaintModalProps> = ({
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
               Category
             </label>
-            <select
-              value={categoryId}
-              onChange={(e) => setCategoryId(Number(e.target.value))}
-              className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
-            >
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name} ({c.department}) - SLA {c.sla_hours}h
-                </option>
-              ))}
-            </select>
+            {categories.length === 0 ? (
+              <div className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl text-slate-400">
+                Loading categories...
+              </div>
+            ) : (
+              <select
+                value={categoryId}
+                onChange={(e) => setCategoryId(Number(e.target.value))}
+                className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
+              >
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} ({c.department}) - SLA {c.sla_hours}h
+                  </option>
+                ))}
+              </select>
+            )}
             {selectedCat?.description && (
               <p className="text-[11px] text-slate-400 mt-1">{selectedCat.description}</p>
             )}

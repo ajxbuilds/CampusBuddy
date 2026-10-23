@@ -341,52 +341,62 @@ Your goal is to understand natural language and converse naturally with students
     import os
     import dotenv
     import logging
-    dotenv.load_dotenv(override=True)
+    dotenv.load_dotenv()
+    _backend_env = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".env")
+    if os.path.exists(_backend_env):
+        dotenv.load_dotenv(_backend_env)
     actual_key = os.getenv("GEMINI_API_KEY")
-    actual_model = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+    configured_model = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
+
+    # Resilient model fallback candidates
+    models_to_try = [configured_model]
+    for fallback in ["gemini-3.5-flash-lite", "gemini-flash-lite-latest"]:
+        if fallback not in models_to_try:
+            models_to_try.append(fallback)
 
     if actual_key and len(actual_key) > 5:
-        try:
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/{actual_model}:generateContent?key={actual_key}"
+        # Combine conversation into a single prompt to avoid strict alternating role API errors
+        history = []
+        for msg in messages[:-1]:
+            sender = "Student" if msg.role == "user" else "Assistant"
+            history.append(f"{sender}: {msg.content}")
 
-                # Combine conversation into a single prompt to avoid strict alternating role API errors
-                history = []
-                for msg in messages[:-1]:
-                    sender = "Student" if msg.role == "user" else "Assistant"
-                    history.append(f"{sender}: {msg.content}")
+        history_text = "\n".join(history)
 
-                history_text = "\n".join(history)
+        final_prompt = f"SYSTEM INSTRUCTIONS:\n{system_prompt}\n\n"
+        if history_text:
+            final_prompt += f"PREVIOUS CONVERSATION:\n{history_text}\n\n"
+        final_prompt += f"STUDENT'S NEW MESSAGE:\n{last_user_message}\n\nASSISTANT REPLY:"
 
-                final_prompt = f"SYSTEM INSTRUCTIONS:\n{system_prompt}\n\n"
-                if history_text:
-                    final_prompt += f"PREVIOUS CONVERSATION:\n{history_text}\n\n"
-                final_prompt += f"STUDENT'S NEW MESSAGE:\n{last_user_message}\n\nASSISTANT REPLY:"
+        payload = {
+            "contents": [{"role": "user", "parts": [{"text": final_prompt}]}],
+            "generationConfig": {"temperature": 0.3}
+        }
 
-                resp = await client.post(
-                    gemini_url,
-                    json={"contents": [{"role": "user", "parts": [{"text": final_prompt}]}], "generationConfig": {"temperature": 0.3}}
-                )
-
-                if resp.status_code == 200:
-                    data = resp.json()
-                    ai_text = data["candidates"][0]["content"]["parts"][0]["text"]
-
-                    structured = AIProcedureAdvice(
-                        suggested_category="GENERAL",
-                        suggested_priority="LOW",
-                        recommended_action="N/A",
-                        required_documents=[],
-                        contact_office="N/A",
-                        guidance_text="Guided via natural language."
-                    )
-                    return AIChatResponse(reply=ai_text, structured_advice=structured)
-                else:
-                    logging.error(f"Gemini API Error: {resp.status_code} - {resp.text}")
-                    # Fallthrough to offline heuristics
-        except Exception as e:
-            logging.exception("NLU LLM Exception")
-            # Fallthrough to offline heuristics
+        for model_candidate in models_to_try:
+            try:
+                gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_candidate}:generateContent?key={actual_key}"
+                async with httpx.AsyncClient(timeout=15.0) as client:
+                    resp = await client.post(gemini_url, json=payload)
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        candidates = data.get("candidates", [])
+                        if candidates and "content" in candidates[0] and "parts" in candidates[0]["content"]:
+                            ai_text = candidates[0]["content"]["parts"][0].get("text", "")
+                            if ai_text:
+                                structured = AIProcedureAdvice(
+                                    suggested_category="GENERAL",
+                                    suggested_priority="LOW",
+                                    recommended_action="N/A",
+                                    required_documents=[],
+                                    contact_office="N/A",
+                                    guidance_text="Guided via natural language."
+                                )
+                                return AIChatResponse(reply=ai_text, structured_advice=structured)
+                    else:
+                        logging.warning(f"Gemini API Error with {model_candidate}: {resp.status_code} - {resp.text[:200]}")
+            except Exception as e:
+                logging.warning(f"Gemini API Exception with {model_candidate}: {type(e).__name__} - {e}")
 
     # Fallback if Gemini fails or is not configured
     query_lower = last_user_message.lower()

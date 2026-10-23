@@ -42,6 +42,11 @@ router = APIRouter(prefix="/complaints", tags=["Complaints"], redirect_slashes=F
 async def get_categories(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(ComplaintCategory).order_by(ComplaintCategory.name))
     categories = result.scalars().all()
+    if not categories:
+        from app.services.reference_data_service import seed_categories_if_empty
+        await seed_categories_if_empty(db)
+        result = await db.execute(select(ComplaintCategory).order_by(ComplaintCategory.name))
+        categories = result.scalars().all()
     return [ComplaintCategoryResponse.model_validate(c) for c in categories]
 
 async def _check_complaints_enabled(db: AsyncSession):

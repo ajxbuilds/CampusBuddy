@@ -1,9 +1,12 @@
 
+import os
 from dotenv import load_dotenv
 
 load_dotenv()
+_backend_env = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env")
+if os.path.exists(_backend_env):
+    load_dotenv(_backend_env)
 
-import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -77,6 +80,11 @@ async def lifespan(app: FastAPI):
                             connection.execute(text(f"ALTER TABLE {table_name} ADD COLUMN {col_name} {col_def}"))
 
         await conn.run_sync(run_migrations)
+
+    # Seed default reference data (complaint categories, badges) if empty
+    from app.services.reference_data_service import seed_all_reference_data
+    async with AsyncSessionLocal() as session:
+        await seed_all_reference_data(session)
 
     yield
 

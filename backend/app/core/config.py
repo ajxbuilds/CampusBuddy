@@ -1,8 +1,15 @@
 import json
 import os
 from typing import List, Any
+from dotenv import load_dotenv
 from pydantic import field_validator
 from pydantic_settings import BaseSettings
+
+# Load .env from cwd or backend/.env if present
+load_dotenv()
+_backend_env = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".env")
+if os.path.exists(_backend_env):
+    load_dotenv(_backend_env)
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "CampusBuddy"
@@ -50,7 +57,7 @@ class Settings(BaseSettings):
     # AI Configuration
     AI_PROVIDER: str = os.getenv("AI_PROVIDER", "auto") # auto, gemini, openai, mock
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
-    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
 
     # Frontend URL

@@ -40,6 +40,11 @@ async def get_my_gamification_summary(
 async def list_all_badges(db: AsyncSession = Depends(get_db)):
     res = await db.execute(select(Badge).order_by(Badge.points_threshold))
     badges = res.scalars().all()
+    if not badges:
+        from app.services.reference_data_service import seed_badges_if_empty
+        await seed_badges_if_empty(db)
+        res = await db.execute(select(Badge).order_by(Badge.points_threshold))
+        badges = res.scalars().all()
     return [BadgeResponse.model_validate(b) for b in badges]
 
 @router.get("/my-badges", response_model=List[UserBadgeResponse])
