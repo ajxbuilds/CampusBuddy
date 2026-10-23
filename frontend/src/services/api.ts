@@ -26,11 +26,15 @@ import { StudyBuddyProfile, StudyBuddyProfileCreate, StudyBuddyDiscover, StudyBu
 
 const getApiBase = (): string => {
   const envUrl = (import.meta.env.VITE_API_BASE_URL || '').trim();
-  if (!envUrl) {
-    return 'http://localhost:8000/api';
+  if (envUrl) {
+    const cleanUrl = envUrl.replace(/\/+$/, '');
+    return cleanUrl.endsWith('/api') ? cleanUrl : `${cleanUrl}/api`;
   }
-  const cleanUrl = envUrl.replace(/\/+$/, '');
-  return cleanUrl.endsWith('/api') ? cleanUrl : `${cleanUrl}/api`;
+  // Production fallback directly to the deployed Render backend
+  if (import.meta.env.PROD) {
+    return 'https://campusbuddy-sl9q.onrender.com/api';
+  }
+  return 'http://localhost:8000/api';
 };
 
 export const API_BASE = getApiBase();
